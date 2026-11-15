@@ -33,6 +33,12 @@ const ro = {
   'region.sud-vest-oltenia': 'Sud-Vest Oltenia',
   'region.bucuresti-ilfov': 'București-Ilfov',
   'region.diaspora': 'Diaspora',
+  'map.label': 'Harta României pe regiuni de dezvoltare',
+  'map.shadeBy': 'Colorează harta după',
+  'map.hint':
+    'Treci cu mouse-ul peste o regiune pentru detalii sau apasă pe ea pentru a o deschide. Culorile urmează scara de deasupra hărții, de la valoarea cea mai mică la cea mai mare.',
+  'map.diaspora': 'nu apare pe hartă',
+  'map.credit': 'Limite administrative: geoBoundaries (Banca Mondială), CC BY 4.0.',
   'regions.title': 'Votul pe regiuni',
   'regions.lede':
     'Fiecare deputat și senator este ales într-un județ, în București sau în diaspora. Aici județele sunt grupate în cele opt regiuni de dezvoltare, ca să vezi de unde vin parlamentarii, cât de des sunt prezenți la vot și cât de des votează altfel decât grupul lor.',
@@ -214,6 +220,12 @@ const en: Record<MessageKey, string> = {
   'region.sud-vest-oltenia': 'South-West Oltenia',
   'region.bucuresti-ilfov': 'Bucharest-Ilfov',
   'region.diaspora': 'Diaspora',
+  'map.label': 'Map of Romania by development region',
+  'map.shadeBy': 'Shade the map by',
+  'map.hint':
+    'Hover a region for details, or click it to open it. Colours follow the scale above the map, from the lowest value to the highest.',
+  'map.diaspora': 'not on the map',
+  'map.credit': 'Boundaries: geoBoundaries (World Bank), CC BY 4.0.',
   'regions.title': 'Voting by region',
   'regions.lede':
     'Every deputy and senator is elected in a county, in Bucharest or in the diaspora. Here the counties are grouped into the eight development regions, to show where members come from, how often they turn up to vote and how often they break with their group.',

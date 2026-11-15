@@ -1,4 +1,5 @@
 import { PartyMix } from '../components/PartyMix'
+import { RegionMap } from '../components/RegionMap'
 import { AsyncView, Card, Notice, PageHeader, PartyDot, SectionTitle, Stat } from '../components/ui'
 import { VoteList } from '../components/VoteList'
 import { fetchConstituencyTallies, fetchVotePage } from '../lib/api'
@@ -111,7 +112,9 @@ export function Regions() {
     <>
       <PageHeader title={t('regions.title')} lede={t('regions.lede')} />
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+      <RegionMap regions={regions} />
+
+      <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         {regions.map((region) => (
           <Card
             key={region.slug}

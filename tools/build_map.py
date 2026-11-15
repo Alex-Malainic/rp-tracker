@@ -1,0 +1,140 @@
+"""Build the map of Romania used by the frontend's Regions page.
+
+Reads county boundaries and writes frontend/src/lib/romaniaMap.ts: one SVG
+path per county and one outline per development region. It only needs to be
+run again if the boundaries or the region table change.
+
+Boundaries: geoBoundaries, Romania ADM1 (source: World Bank), CC BY 4.0.
+https://www.geoboundaries.org/api/current/gbOpen/ROU/ADM1/
+
+    curl -L -o ro.geojson <simplifiedGeometryGeoJSON url from the API above>
+    uv run --with shapely --with topojson python tools/build_map.py ro.geojson
+
+shapely and topojson are needed only by this script, so they are not project
+dependencies.
+"""
+
+from __future__ import annotations
+
+import json
+import math
+import sys
+import unicodedata
+from pathlib import Path
+
+import topojson
+from shapely.geometry import shape
+from shapely.ops import unary_union
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
+from ingestion.constituencies import CONSTITUENCIES, DIASPORA
+
+OUTPUT = Path(__file__).resolve().parent.parent / "frontend" / "src" / "lib" / "romaniaMap.ts"
+WIDTH = 800
+PADDING = 8
+# Degrees. Simplifying on shared topology keeps neighbouring borders identical.
+TOLERANCE = 0.012
+# Parallels shrink towards the pole; scaling longitude by cos(latitude) at the
+# country's middle keeps its proportions without a projection library.
+MID_LATITUDE = 45.9
+# Sud-Muntenia wraps around the much smaller Bucuresti-Ilfov, so their labels
+# would collide at the natural position. Each entry is an offset in map units
+# and whether the label ends up outside its region and needs a leader line.
+LABEL_NUDGE = {"sud-muntenia": (-78, -58, False), "bucuresti-ilfov": (62, 34, True)}
+
+
+def plain(name: str) -> str:
+    """Upper-case without diacritics or punctuation: 'Satu Mare' -> 'SATUMARE'."""
+    stripped = unicodedata.normalize("NFD", name)
+    return "".join(c for c in stripped if c.isalnum()).upper()
+
+
+def main(source: str) -> None:
+    features = json.loads(Path(source).read_text(encoding="utf-8"))["features"]
+    by_name = {plain(feature["properties"]["shapeName"]): feature for feature in features}
+
+    numbers, shapes = [], []
+    for number, (name, region) in CONSTITUENCIES.items():
+        if region == DIASPORA:
+            continue  # the diaspora has no place on the map
+        numbers.append(number)
+        shapes.append(shape(by_name.pop(plain(name))["geometry"]))
+    if by_name:
+        raise SystemExit(f"boundaries without a constituency: {sorted(by_name)}")
+
+    topology = topojson.Topology(shapes, prequantize=False, toposimplify=TOLERANCE)
+    simplified = [
+        shape(feature["geometry"]) for feature in json.loads(topology.to_geojson())["features"]
+    ]
+
+    k = math.cos(math.radians(MID_LATITUDE))
+    min_lon, min_lat, max_lon, max_lat = unary_union(simplified).bounds
+    scale = (WIDTH - 2 * PADDING) / ((max_lon - min_lon) * k)
+    height = round((max_lat - min_lat) * scale + 2 * PADDING)
+
+    def project(lon: float, lat: float) -> tuple[float, float]:
+        return (
+            round((lon - min_lon) * k * scale + PADDING, 1),
+            round((max_lat - lat) * scale + PADDING, 1),
+        )
+
+    def path(geometry) -> str:
+        polygons = geometry.geoms if geometry.geom_type == "MultiPolygon" else [geometry]
+        parts = []
+        for polygon in polygons:
+            for ring in (polygon.exterior, *polygon.interiors):
+                points = [project(lon, lat) for lon, lat in ring.coords]
+                deduped = [p for i, p in enumerate(points) if i == 0 or p != points[i - 1]]
+                parts.append("M" + "L".join(f"{x:g},{y:g}" for x, y in deduped[:-1]) + "Z")
+        return "".join(parts)
+
+    def label(geometry) -> tuple[float, float]:
+        point = geometry.representative_point()
+        centroid = geometry.centroid
+        chosen = centroid if geometry.contains(centroid) else point
+        return project(chosen.x, chosen.y)
+
+    counties = []
+    by_region: dict[str, list] = {}
+    for number, geometry in zip(numbers, simplified, strict=True):
+        region = CONSTITUENCIES[number][1]
+        by_region.setdefault(region, []).append(geometry)
+        counties.append({"id": number, "region": region, "d": path(geometry)})
+
+    regions = []
+    for region, geometries in by_region.items():
+        outline = unary_union([geometry.buffer(0) for geometry in geometries])
+        x, y = label(outline)
+        entry = {"slug": region, "d": path(outline), "x": x, "y": y}
+        if region in LABEL_NUDGE:
+            dx, dy, needs_leader = LABEL_NUDGE[region]
+            # "anchor" is the point inside the region that the leader points to.
+            entry.update(x=x + dx, y=y + dy)
+            if needs_leader:
+                entry["anchor"] = [x, y]
+        regions.append(entry)
+
+    points = sum(county["d"].count(",") for county in counties)
+    OUTPUT.write_text(
+        "// Generated by tools/build_map.py. Do not edit by hand.\n"
+        "// Boundaries: geoBoundaries, Romania ADM1 (World Bank), CC BY 4.0.\n\n"
+        f"export const MAP_WIDTH = {WIDTH}\n"
+        f"export const MAP_HEIGHT = {height}\n\n"
+        "/** One path per county, keyed by constituency number. */\n"
+        "export const MAP_COUNTIES: { id: number; region: string; d: string }[] = "
+        + json.dumps(counties, separators=(",", ":"))
+        + "\n\n"
+        "/** The outline of each region and a point inside it for its label. */\n"
+        "export const MAP_REGIONS: {\n"
+        "  slug: string\n  d: string\n  x: number\n  y: number\n  anchor?: number[]\n}[] = "
+        + json.dumps(regions, separators=(",", ":"))
+        + "\n",
+        encoding="utf-8",
+        newline="\n",
+    )
+    print(f"{OUTPUT.name}: {len(counties)} counties, {len(regions)} regions, {points} points")
+
+
+if __name__ == "__main__":
+    main(sys.argv[1])
