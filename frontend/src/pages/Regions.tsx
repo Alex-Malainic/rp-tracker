@@ -1,4 +1,4 @@
-import { PartyMix } from '../components/PartyMix'
+import { PartyLegend, PartyMix } from '../components/PartyMix'
 import { RegionMap } from '../components/RegionMap'
 import { AsyncView, Card, Notice, PageHeader, PartyDot, SectionTitle, Stat } from '../components/ui'
 import { VoteList } from '../components/VoteList'
@@ -114,7 +114,14 @@ export function Regions() {
 
       <RegionMap regions={regions} />
 
-      <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+      <div className="mt-4">
+        <PartyLegend
+          members={regions.flatMap((region) => region.members)}
+          label={t('regions.legend')}
+        />
+      </div>
+
+      <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         {regions.map((region) => (
           <Card
             key={region.slug}
@@ -160,7 +167,7 @@ export function Regions() {
               <div className="mb-1.5 text-xs font-medium uppercase tracking-wide text-ink-3">
                 {t('regions.partyMix')}
               </div>
-              <PartyMix members={region.members} />
+              <PartyMix members={region.members} legend={false} />
             </div>
 
             <a

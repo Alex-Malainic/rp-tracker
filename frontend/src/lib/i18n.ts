@@ -51,6 +51,7 @@ const ro = {
   'regions.attendance': 'Prezență la vot',
   'regions.dissent': 'Voturi împotriva grupului',
   'regions.partyMix': 'Componență pe partide',
+  'regions.legend': 'Culorile partidelor',
   'regions.open': 'Vezi regiunea →',
   'regions.compareTitle': 'Regiunile comparate',
   'regions.compareNote':
@@ -237,6 +238,7 @@ const en: Record<MessageKey, string> = {
   'regions.attendance': 'Attendance',
   'regions.dissent': 'Votes against own group',
   'regions.partyMix': 'Party mix',
+  'regions.legend': 'Party colours',
   'regions.open': 'Open region →',
   'regions.compareTitle': 'Regions compared',
   'regions.compareNote':
