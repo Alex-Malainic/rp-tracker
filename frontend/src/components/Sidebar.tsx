@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { plain } from '../lib/format'
+import { partyStyle } from '../lib/parties'
 import { useData, useFilters } from '../lib/store'
 import { PartyDot } from './ui'
 
@@ -16,6 +17,7 @@ export function Sidebar({ section, onNavigate }: { section: string; onNavigate: 
   const { selected, toggleParty, clearParties, finalOnly, setFinalOnly } = useFilters()
   const [search, setSearch] = useState('')
 
+  const largest = Math.max(1, ...parties.map((party) => membersByParty.get(party.id)?.length ?? 0))
   const needle = plain(search.trim())
   const matches = needle
     ? members
@@ -102,40 +104,70 @@ export function Sidebar({ section, onNavigate }: { section: string; onNavigate: 
       </section>
 
       <section aria-labelledby="filter-parties">
-        <div className="flex items-baseline justify-between px-2">
+        <div className="flex items-center justify-between px-2">
           <h2 id="filter-parties" className="text-xs font-semibold uppercase tracking-wide text-ink-3">
             Parties
           </h2>
-          {selected.size > 0 && (
+          {selected.size > 0 ? (
             <button
               type="button"
               onClick={clearParties}
-              className="cursor-pointer text-xs font-medium text-accent hover:underline"
+              className="cursor-pointer rounded-full bg-accent-soft px-2 py-0.5 text-xs font-medium text-accent hover:underline"
             >
-              Show all
+              {selected.size} selected · clear
             </button>
+          ) : (
+            <span className="rounded-full bg-sunken px-2 py-0.5 text-xs text-ink-3">
+              all {parties.length}
+            </span>
           )}
         </div>
-        <ul className="mt-2 flex flex-col gap-0.5">
+        <ul className="mt-2 flex flex-col gap-1">
           {parties.map((party) => {
             const active = selected.has(party.id)
+            const size = membersByParty.get(party.id)?.length ?? 0
             return (
               <li key={party.id}>
                 <button
                   type="button"
                   aria-pressed={active}
                   onClick={() => toggleParty(party.id)}
-                  className={`flex w-full cursor-pointer items-center gap-2.5 rounded-lg px-2 py-1.5 text-left text-sm transition-colors ${
-                    active ? 'bg-sunken font-semibold text-ink' : 'text-ink-2 hover:bg-sunken'
-                  } ${selected.size > 0 && !active ? 'opacity-55' : ''}`}
+                  style={partyStyle(party)}
+                  title={`${party.name}: ${size} members`}
+                  className={`group flex w-full cursor-pointer items-center gap-3 rounded-xl border p-2 text-left transition ${
+                    active
+                      ? 'border-(--party)/60 bg-(--party)/12 shadow-sm'
+                      : 'border-transparent hover:border-line hover:bg-sunken'
+                  } ${selected.size > 0 && !active ? 'opacity-60 hover:opacity-100' : ''}`}
                 >
-                  <PartyDot party={party} />
-                  <span className="grow truncate">{party.abbreviation}</span>
-                  <span className="text-xs tabular-nums text-ink-3">
-                    {membersByParty.get(party.id)?.length ?? 0}
+                  <span
+                    className={`grid size-9 shrink-0 place-items-center rounded-lg text-sm font-semibold tabular-nums ring-1 ring-(--party)/45 transition ${
+                      active ? 'bg-(--party)/35' : 'bg-(--party)/15 group-hover:bg-(--party)/25'
+                    }`}
+                  >
+                    {size}
                   </span>
-                  <span aria-hidden="true" className="w-3 text-xs text-accent">
-                    {active ? '✓' : ''}
+                  <span className="min-w-0 grow">
+                    <span className="flex items-center justify-between gap-2">
+                      <span className={`truncate text-sm ${active ? 'font-semibold' : 'font-medium'}`}>
+                        {party.abbreviation}
+                      </span>
+                      <span
+                        aria-hidden="true"
+                        className={`grid size-4 shrink-0 place-items-center rounded-full text-[10px] font-bold transition ${
+                          active ? 'bg-(--party) text-white' : 'border border-line text-transparent'
+                        }`}
+                      >
+                        ✓
+                      </span>
+                    </span>
+                    {/* Size relative to the largest group. */}
+                    <span className="mt-1.5 block h-1 overflow-hidden rounded-full bg-sunken group-hover:bg-line">
+                      <span
+                        className="block h-full rounded-full bg-(--party)"
+                        style={{ width: `${(size / largest) * 100}%` }}
+                      />
+                    </span>
                   </span>
                 </button>
               </li>
@@ -143,7 +175,8 @@ export function Sidebar({ section, onNavigate }: { section: string; onNavigate: 
           })}
         </ul>
         <p className="mt-2 px-2 text-xs text-ink-3">
-          Pick one or more to focus every page on them. Numbers are members.
+          Pick one or more to focus every page on them. The number is the group’s members; the bar
+          compares its size with the largest.
         </p>
       </section>
 
