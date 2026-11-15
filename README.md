@@ -56,7 +56,7 @@ The data source, its formats and its many quirks are documented in
   scan every ballot. They are recomputed once after each ingestion, so page
   loads never pay for them.
 - **A daily cron rather than anything live.** Parliament sits a few days a
-  week and results do not change after the sitting. The job re-reads the last
+  week, so new results appear only on sitting days. The job re-reads the last
   three days on each run, which costs nothing because loads are idempotent and
   covers a failed run or a late correction.
 - **HTML scraping rather than the XML feeds.** cdep.ro offers XML exports, but
