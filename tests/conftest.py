@@ -79,6 +79,8 @@ class FakeSource:
     ) -> None:
         self.days = days or {}
         self.ballots = ballots or {}
+        # Alphabetical member lists, one per chamber.
+        self.members: dict = {}
         self.calendar_requests: list[tuple[int, int]] = []
 
     def sitting_days(self, year: int, month: int) -> str:
@@ -92,6 +94,9 @@ class FakeSource:
 
     def ballots_page(self, vote_id: int) -> str:
         return self.ballots[vote_id]
+
+    def members_page(self, chamber, legislature: int) -> str:
+        return self.members.get(chamber, "")
 
 
 class FakeDb:
@@ -125,6 +130,9 @@ class _FakeTable:
         self._db = db
         self._name = name
 
+    def update(self, values: dict) -> _FakeUpdate:
+        return _FakeUpdate(self._db, self._name, values)
+
     def upsert(self, rows: list[dict], *, on_conflict: str) -> _FakeQuery:
         stored = self._db.tables.setdefault(self._name, {})
         columns = on_conflict.split(",")
@@ -140,9 +148,56 @@ class _FakeTable:
         return _FakeQuery(saved)
 
 
+class _FakeUpdate:
+    """An update narrowed by eq() and in_() filters, applied on execute()."""
+
+    def __init__(self, db: FakeDb, name: str, values: dict) -> None:
+        self._db = db
+        self._name = name
+        self._values = values
+        self._filters: list = []
+
+    def eq(self, column: str, value) -> _FakeUpdate:
+        self._filters.append(lambda row: row.get(column) == value)
+        return self
+
+    def in_(self, column: str, values: list) -> _FakeUpdate:
+        self._filters.append(lambda row: row.get(column) in values)
+        return self
+
+    def execute(self) -> _FakeQuery:
+        changed = []
+        for row in self._db.tables.get(self._name, {}).values():
+            if all(matches(row) for matches in self._filters):
+                row.update(self._values)
+                changed.append(dict(row))
+        return _FakeQuery(changed)
+
+
 class _FakeQuery:
     def __init__(self, data: list[dict]) -> None:
         self.data = data
 
     def execute(self) -> _FakeQuery:
         return self
+
+
+def members_html(*members: tuple[int, str, int | None], chamber: int = 2) -> str:
+    """Build a member list from (mp id, name, constituency number) tuples.
+
+    A constituency of None makes a nationally elected member.
+    """
+    rows = ""
+    for position, (mp_id, name, constituency) in enumerate(members, start=1):
+        seat = (
+            f'<a href="/ords/pls/parlam/structura2015.ce?cir={constituency}&leg=2024">'
+            f"{constituency} / NAME</a>"
+            if constituency
+            else "la nivel naţional"
+        )
+        rows += (
+            f'<tr><td>{position}.</td><td><b><a href="/ords/pls/parlam/structura2015.mp'
+            f'?idm={mp_id}&cam={chamber}&leg=2024">{name}</a></b></td>'
+            f"<td colspan=2>{seat}</td><td>PSD</td></tr>"
+        )
+    return f"<table>{rows}</table>"

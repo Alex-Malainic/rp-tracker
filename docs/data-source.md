@@ -98,6 +98,27 @@ names only.
 - **Member ids are per legislature.** `idm=1&cam=2&leg=2024` and
   `idm=1&cam=2&leg=2016` are different people.
 
+## Constituencies
+
+Every deputy and senator is elected in one of 43 constituencies: the 41
+counties, Bucharest (42) and the diaspora (43).
+
+`https://www.cdep.ro/ords/pls/parlam/structura2015.de?cam=<1|2>&leg=<year>&idl=1`
+is the alphabetical list of a chamber's members (`cam=1` Senate, `cam=2`
+Chamber). Each row links the member (`idm`, the same id as on vote pages) and
+their constituency, labelled `35 / SUCEAVA`. Two requests cover everyone.
+
+- **Nationally elected members have no constituency.** The national
+  minorities' deputies are listed without one and stay out of regional views.
+- **Do not use the per-constituency pages** (`structura2015.ce?cir=<n>`). Their
+  `cir` parameter is a list position, not the constituency number (position 42
+  is Ilfov, number 25), and for the Senate they are incomplete: Cluj shows no
+  senators there although the alphabetical list has them.
+- **Regions are not in the source.** Constituency names and their development
+  regions (NUTS 2) are fixed in `ingestion/constituencies.py`.
+- Checked on 2026-11-15: 317 deputies and 137 senators with a constituency,
+  all 43 constituencies present in both chambers.
+
 ## Consistency check
 
 For every vote probed, the number of HTML rows equalled the number of XML rows

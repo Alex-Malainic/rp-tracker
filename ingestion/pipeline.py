@@ -9,10 +9,12 @@ from dataclasses import dataclass
 from datetime import date
 from typing import Protocol
 
-from ingestion.models import Ballot, Vote
+from ingestion.constituencies import CONSTITUENCIES, Seat
+from ingestion.models import Ballot, Chamber, Vote
 from ingestion.parse import (
     parse_ballots_page,
     parse_day_page,
+    parse_members_page,
     parse_sitting_days,
     skip_reason,
 )
@@ -24,6 +26,7 @@ class Source(Protocol):
     def sitting_days(self, year: int, month: int) -> str: ...
     def day_page(self, day: date) -> str: ...
     def ballots_page(self, vote_id: int) -> str: ...
+    def members_page(self, chamber: Chamber, legislature: int) -> str: ...
 
 
 class SourceMismatchError(RuntimeError):
@@ -68,6 +71,40 @@ def collect_day(source: Source, day: date) -> DayData:
 
     log.info("%s: %d votes, %d ballots", day, len(kept), len(ballots))
     return DayData(day=day, votes=kept, ballots=ballots)
+
+
+def collect_seats(source: Source, legislature: int) -> list[Seat]:
+    """Fetch which constituency every deputy and senator was elected in.
+
+    Members elected nationally (the national minorities' deputies) hold no
+    constituency seat and are absent from the result.
+    """
+    seats: list[Seat] = []
+    for chamber in (Chamber.DEPUTIES, Chamber.SENATE):
+        found = parse_members_page(source.members_page(chamber, legislature))
+        wrong = [
+            seat for seat in found if (seat.chamber, seat.legislature) != (chamber, legislature)
+        ]
+        if wrong:
+            raise SourceMismatchError(
+                f"{chamber.value} list for {legislature} contains other members, "
+                f"e.g. {wrong[0].name}"
+            )
+        # Every constituency elects members to both chambers, so a gap means
+        # the page was cut short or its format changed.
+        missing = sorted(set(CONSTITUENCIES) - {seat.constituency for seat in found})
+        if missing:
+            raise SourceMismatchError(
+                f"{chamber.value}, legislature {legislature}: no members found for "
+                f"constituencies {missing}"
+            )
+        seats.extend(found)
+
+    holders = {(seat.chamber, seat.legislature, seat.mp_source_id) for seat in seats}
+    if len(holders) != len(seats):
+        raise SourceMismatchError("a member is listed more than once")
+    log.info("legislature %d: %d seats", legislature, len(seats))
+    return seats
 
 
 def _verify(vote: Vote, ballots: list[Ballot]) -> None:

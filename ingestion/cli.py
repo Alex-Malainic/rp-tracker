@@ -5,6 +5,7 @@ Examples:
     python -m ingestion --date 2026-11-10
     python -m ingestion --from 2024-12-01 --to 2026-11-15
     python -m ingestion --date 2026-11-10 --dry-run
+    python -m ingestion --constituencies         # who was elected where
 """
 
 from __future__ import annotations
@@ -16,9 +17,12 @@ from datetime import UTC, date, datetime
 
 from ingestion import load
 from ingestion.fetch import CdepClient
-from ingestion.pipeline import Source, collect_day, sitting_days_between
+from ingestion.pipeline import Source, collect_day, collect_seats, sitting_days_between
 
 log = logging.getLogger("ingestion")
+
+# The legislature elected in December 2024.
+CURRENT_LEGISLATURE = 2024
 
 
 def run(source: Source, db: object | None, start: date, end: date) -> int:
@@ -43,6 +47,15 @@ def run(source: Source, db: object | None, start: date, end: date) -> int:
     return total
 
 
+def run_constituencies(source: Source, db: object | None, legislature: int) -> int:
+    """Record every member's constituency. Returns the number of seats found."""
+    seats = collect_seats(source, legislature)
+    if db is not None:
+        load.load_seats(db, seats)
+        load.refresh_stats(db)
+    return len(seats)
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         prog="python -m ingestion", description="Load parliamentary votes into Supabase."
@@ -52,10 +65,18 @@ def main(argv: Sequence[str] | None = None) -> int:
         "--from", dest="start", type=date.fromisoformat, help="first day of a range"
     )
     parser.add_argument("--to", dest="end", type=date.fromisoformat, help="last day of a range")
+    parser.add_argument(
+        "--constituencies",
+        action="store_true",
+        help="load which constituency each member was elected in, instead of votes",
+    )
+    parser.add_argument("--legislature", type=int, default=CURRENT_LEGISLATURE)
     parser.add_argument("--dry-run", action="store_true", help="fetch and verify, write nothing")
     parser.add_argument("--delay", type=float, default=1.0, help="seconds between requests")
     args = parser.parse_args(argv)
 
+    if args.constituencies and (args.date or args.start or args.end):
+        parser.error("--constituencies takes no dates")
     if args.date and (args.start or args.end):
         parser.error("use either --date or --from/--to")
     if args.end and not args.start:
@@ -72,7 +93,10 @@ def main(argv: Sequence[str] | None = None) -> int:
     db = None if args.dry_run else load.connect()
     source = CdepClient(delay=args.delay)
     try:
-        run(source, db, start, end)
+        if args.constituencies:
+            run_constituencies(source, db, args.legislature)
+        else:
+            run(source, db, start, end)
     finally:
         source.close()
     return 0

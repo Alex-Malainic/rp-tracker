@@ -13,6 +13,7 @@ from typing import Any
 
 from supabase import Client, create_client
 
+from ingestion.constituencies import CONSTITUENCIES, Seat
 from ingestion.models import Ballot, Chamber, Vote
 
 log = logging.getLogger(__name__)
@@ -66,6 +67,42 @@ def load(db: Client, votes: list[Vote], ballots: list[Ballot]) -> None:
         on_conflict="vote_id,mp_id",
     )
     log.info("loaded %d votes and %d ballots", len(votes), len(ballots))
+
+
+def load_seats(db: Client, seats: list[Seat]) -> int:
+    """Record each member's constituency. Returns how many members were updated.
+
+    Only members already known from a ballot are updated: a member who has
+    not voted yet has no row, and gets their constituency on a later run.
+    """
+    _upsert(
+        db,
+        "constituencies",
+        [
+            {"id": number, "name": name, "region": region}
+            for number, (name, region) in CONSTITUENCIES.items()
+        ],
+        on_conflict="id",
+    )
+
+    groups: dict[tuple[int, Chamber, int], list[int]] = {}
+    for seat in seats:
+        key = (seat.constituency, seat.chamber, seat.legislature)
+        groups.setdefault(key, []).append(seat.mp_source_id)
+
+    updated = 0
+    for (constituency, chamber, legislature), source_ids in groups.items():
+        response = (
+            db.table("mps")
+            .update({"constituency_id": constituency})
+            .eq("chamber", chamber.value)
+            .eq("legislature", legislature)
+            .in_("source_id", source_ids)
+            .execute()
+        )
+        updated += len(response.data)
+    log.info("constituencies set for %d of %d listed members", updated, len(seats))
+    return updated
 
 
 def refresh_stats(db: Client) -> None:

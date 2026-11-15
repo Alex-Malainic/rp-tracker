@@ -9,9 +9,14 @@ from datetime import date
 
 import httpx
 
+from ingestion.models import Chamber
+
 log = logging.getLogger(__name__)
 
 BASE_URL = "https://www.cdep.ro/ords/pls/steno/"
+MEMBERS_URL = "https://www.cdep.ro/ords/pls/parlam/"
+# The site numbers chambers 1 (Senate) and 2 (Chamber of Deputies).
+CHAMBER_CODES = {Chamber.SENATE: 1, Chamber.DEPUTIES: 2}
 USER_AGENT = "rp-tracker/0.1 (public vote tracker; github.com)"
 RETRYABLE_STATUS = frozenset({429, 500, 502, 503, 504})
 
@@ -54,6 +59,13 @@ class CdepClient:
 
     def ballots_page(self, vote_id: int) -> str:
         return self._get("evot2015.nominal", {"idv": vote_id, "idl": 1})
+
+    def members_page(self, chamber: Chamber, legislature: int) -> str:
+        """The alphabetical list of a chamber's members, with constituencies."""
+        return self._get(
+            f"{MEMBERS_URL}structura2015.de",
+            {"cam": CHAMBER_CODES[chamber], "leg": legislature, "idl": 1},
+        )
 
     def close(self) -> None:
         self._http.close()

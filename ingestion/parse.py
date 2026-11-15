@@ -13,6 +13,7 @@ from urllib.parse import parse_qs, urljoin, urlparse
 
 from bs4 import BeautifulSoup, Tag
 
+from ingestion.constituencies import CONSTITUENCIES, Seat
 from ingestion.models import Ballot, Chamber, Choice, Vote
 
 BASE_URL = "https://www.cdep.ro"
@@ -27,6 +28,7 @@ _MEMBER_CHAMBERS = {"1": Chamber.SENATE, "2": Chamber.DEPUTIES}
 _TALLY_COLUMNS = ("Prezenta", "Pentru", "Împotriva", "Abtineri", "Nu au votat*")
 _AFFILIATED = re.compile(r"\s*\(afiliat\)\s*$", re.IGNORECASE)
 _TEST_VOTE = re.compile(r"^\s*vot\s+test\b", re.IGNORECASE)
+_CONSTITUENCY_NUMBER = re.compile(r"\s*(\d+)\s*/")
 
 
 class ParseError(ValueError):
@@ -153,6 +155,44 @@ def parse_ballots_page(html: str, vote_id: int) -> list[Ballot]:
         except (KeyError, ValueError) as error:
             raise ParseError(f"vote {vote_id}: unexpected ballot row {cells}") from error
     return ballots
+
+
+def parse_members_page(html: str) -> list[Seat]:
+    """Parse a chamber's alphabetical member list into constituency seats.
+
+    Each row names the member and their constituency as "35 / SUCEAVA".
+    Members elected nationally (the national minorities' deputies) have no
+    constituency and are left out.
+    """
+    soup = BeautifulSoup(html, "html.parser")
+    seats = []
+    for link in soup.select('a[href*="structura2015.mp?"]'):
+        row = link.find_parent("tr")
+        if row is None:
+            continue  # a member link outside the list, e.g. navigation
+        constituency = row.select_one('a[href*="structura2015.ce?"]')
+        if constituency is None:
+            continue
+        match = _CONSTITUENCY_NUMBER.match(constituency.get_text(" ", strip=True))
+        if match is None:
+            raise ParseError(f"unexpected constituency label {constituency.get_text()!r}")
+        number = int(match.group(1))
+        if number not in CONSTITUENCIES:
+            raise ParseError(f"unknown constituency number {number}")
+        query = parse_qs(urlparse(link["href"]).query)
+        try:
+            seats.append(
+                Seat(
+                    constituency=number,
+                    chamber=_MEMBER_CHAMBERS[query["cam"][0]],
+                    legislature=int(query["leg"][0]),
+                    mp_source_id=int(query["idm"][0]),
+                    name=" ".join(link.get_text().split()),
+                )
+            )
+        except (KeyError, ValueError) as error:
+            raise ParseError(f"unexpected member link {link['href']!r}") from error
+    return seats
 
 
 def _query_int(href: str, name: str) -> int:

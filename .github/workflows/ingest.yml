@@ -4,9 +4,15 @@ on:
   schedule:
     # 20:00 UTC is 22:00 in Bucharest in winter and 23:00 in summer, after
     # sittings have ended.
-    - cron: "0 20 * * *"
+    - cron: "0 20 * * 2-7"
+    # Mondays also refresh which constituency each member was elected in.
+    - cron: "0 20 * * 1"
   workflow_dispatch:
     inputs:
+      constituencies:
+        description: "Also refresh which constituency each member was elected in."
+        type: boolean
+        default: false
       date:
         description: "Day to ingest (YYYY-MM-DD). Empty: the last three days."
         required: false
@@ -50,6 +56,15 @@ jobs:
             args=(--from "$(date -u -d '3 days ago' +%F)")
           fi
           uv run --no-dev python -m ingestion "${args[@]}"
+
+      # Members change constituency only when a seat changes hands, so once a
+      # week is plenty. It takes two requests.
+      - name: Refresh constituencies
+        if: github.event.schedule == '0 20 * * 1' || inputs.constituencies
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: uv run --no-dev python -m ingestion --constituencies
 
       - name: Open an issue on failure
         if: failure()
