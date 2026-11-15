@@ -1,15 +1,17 @@
-import { formatPercent, heatColors } from '../lib/format'
+import { heatColors } from '../lib/format'
 import { usePrefersDark } from '../lib/hooks'
+import { useLocale } from '../lib/i18n'
 import type { Party, SimilarityCell } from '../lib/types'
 import { Notice, PartyDot } from './ui'
 
 /** How often each pair of groups took the same position, as a labelled grid. */
 export function Heatmap({ parties, cells }: { parties: Party[]; cells: SimilarityCell[] }) {
+  const { t, percent } = useLocale()
   const dark = usePrefersDark()
   const lookup = new Map(cells.map((cell) => [`${cell.party_a}:${cell.party_b}`, cell]))
   const present = new Set(cells.map((cell) => cell.party_a))
   const shown = parties.filter((party) => present.has(party.id))
-  if (shown.length < 2) return <Notice>Select at least two parties with votes to compare them.</Notice>
+  if (shown.length < 2) return <Notice>{t('heatmap.need')}</Notice>
 
   return (
     <div className="overflow-x-auto">
@@ -41,7 +43,12 @@ export function Heatmap({ parties, cells }: { parties: Party[]; cells: Similarit
                     key={column.id}
                     style={heatColors(cell.agreement, dark)}
                     className="h-9 min-w-12 rounded-md text-center font-medium tabular-nums"
-                    title={`${row.abbreviation} and ${column.abbreviation}: same position on ${formatPercent(cell.agreement)} of ${cell.votes} votes`}
+                    title={t('heatmap.cell', {
+                      a: row.abbreviation,
+                      b: column.abbreviation,
+                      percent: percent(cell.agreement),
+                      n: cell.votes,
+                    })}
                   >
                     {Math.round(cell.agreement * 100)}
                   </td>

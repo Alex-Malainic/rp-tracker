@@ -1,15 +1,14 @@
-import { formatDate } from '../lib/format'
+import type { VotePage } from '../lib/api'
+import { useLocale } from '../lib/i18n'
 import { partyStyle } from '../lib/parties'
 import { tallySegments } from '../lib/tally'
-import type { VotePage } from '../lib/api'
-import type { Party, Vote } from '../lib/types'
+import type { Party, PartyPosition, Vote } from '../lib/types'
 import { Card, ChoiceBadge, Notice, ResultBadge, SplitBar } from './ui'
-
-const CHAMBER_LABELS = { deputies: 'Chamber', senate: 'Senate', joint: 'Joint sitting' }
 
 /** Votes as rows, each with its tally and the position of the given groups. */
 export function VoteList({ page, parties }: { page: VotePage; parties: Party[] }) {
-  if (page.votes.length === 0) return <Notice>No votes to show.</Notice>
+  const { t } = useLocale()
+  if (page.votes.length === 0) return <Notice>{t('votes.none')}</Notice>
   return (
     <Card className="divide-y divide-line">
       {page.votes.map((vote) => (
@@ -22,31 +21,33 @@ export function VoteList({ page, parties }: { page: VotePage; parties: Party[] }
 interface RowProps {
   vote: Vote
   parties: Party[]
-  positions: VotePage['positions'] extends Map<number, infer P> ? P | undefined : never
+  positions: Map<number, PartyPosition> | undefined
 }
 
 function VoteRow({ vote, parties, positions }: RowProps) {
+  const { t, date } = useLocale()
   return (
-    <article className="grid gap-x-6 gap-y-3 p-4 lg:grid-cols-[1fr_15rem]">
+    <article className="grid gap-x-6 gap-y-3 p-4 lg:grid-cols-[1fr_18rem]">
       <div className="min-w-0">
         <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-ink-3">
-          <time dateTime={vote.sitting_date}>{formatDate(vote.sitting_date)}</time>
+          <time dateTime={vote.sitting_date}>{date(vote.sitting_date)}</time>
           <span aria-hidden="true">·</span>
-          <span>{CHAMBER_LABELS[vote.chamber]}</span>
+          <span>{t(`chamber.${vote.chamber}`)}</span>
           {vote.is_final && (
             <span className="rounded-full bg-accent-soft px-2 py-0.5 font-medium text-accent">
-              Final vote
+              {t('vote.final')}
             </span>
           )}
         </div>
-        <h3 className="mt-1 font-medium leading-snug">
+        {/* Titles come from the source and stay in Romanian in both languages. */}
+        <h3 lang="ro" className="mt-1 font-medium leading-snug">
           <a href={vote.source_url} target="_blank" rel="noreferrer" className="hover:underline">
             {vote.bill_title ?? vote.title}
           </a>
         </h3>
         {vote.bill_title && (
           <p className="mt-0.5 text-sm text-ink-2">
-            {vote.title}
+            <span lang="ro">{vote.title}</span>
             {vote.bill_url && (
               <>
                 {' · '}
@@ -56,7 +57,7 @@ function VoteRow({ vote, parties, positions }: RowProps) {
                   rel="noreferrer"
                   className="text-accent hover:underline"
                 >
-                  Bill page
+                  {t('vote.billPage')}
                 </a>
               </>
             )}
@@ -72,8 +73,12 @@ function VoteRow({ vote, parties, positions }: RowProps) {
                   style={partyStyle(party)}
                   title={
                     position
-                      ? `${party.abbreviation}: ${position.agreeing} of ${position.voters} voted this way`
-                      : `${party.abbreviation}: no votes cast`
+                      ? t('chip.voted', {
+                          party: party.abbreviation,
+                          a: position.agreeing,
+                          b: position.voters,
+                        })
+                      : t('chip.none', { party: party.abbreviation })
                   }
                   className="inline-flex items-center gap-1.5 rounded-full border border-line border-l-4 border-l-(--party) py-0.5 pl-2 pr-2.5 text-xs font-medium"
                 >
@@ -81,7 +86,7 @@ function VoteRow({ vote, parties, positions }: RowProps) {
                   {position ? (
                     <ChoiceBadge choice={position.position} short />
                   ) : (
-                    <span className="text-ink-3">n/a</span>
+                    <span className="text-ink-3">–</span>
                   )}
                 </li>
               )
@@ -92,7 +97,9 @@ function VoteRow({ vote, parties, positions }: RowProps) {
       <div className="flex flex-col gap-2 lg:items-end">
         <ResultBadge result={vote.result} />
         <div className="w-full">
-          <SplitBar segments={tallySegments(vote.votes_for, vote.votes_against, vote.abstained)} />
+          <SplitBar
+            segments={tallySegments(t, vote.votes_for, vote.votes_against, vote.abstained)}
+          />
         </div>
       </div>
     </article>

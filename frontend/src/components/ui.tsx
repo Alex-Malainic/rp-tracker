@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
-import { CHOICE_LABELS } from '../lib/format'
 import type { Async } from '../lib/hooks'
+import { useLocale } from '../lib/i18n'
 import { partyStyle } from '../lib/parties'
 import type { Choice, Party, Result } from '../lib/types'
 
@@ -51,10 +51,19 @@ export function AsyncView<T>({
   state: Async<T>
   children: (data: T) => ReactNode
 }) {
+  const { t } = useLocale()
   if (state.status === 'loading') {
-    return <div className="h-32 animate-pulse rounded-2xl bg-sunken" role="status" aria-label="Loading" />
+    return (
+      <div
+        className="h-32 animate-pulse rounded-2xl bg-sunken"
+        role="status"
+        aria-label={t('loading')}
+      />
+    )
   }
-  if (state.status === 'error') return <Notice error>Could not load data: {state.message}</Notice>
+  if (state.status === 'error') {
+    return <Notice error>{t('error.load', { message: state.message })}</Notice>
+  }
   return <>{children(state.data)}</>
 }
 
@@ -89,8 +98,12 @@ export function Stat({ label, value, detail, icon }: StatProps) {
           {icon}
         </span>
       )}
-      <div className="truncate pr-10 text-xs font-medium uppercase tracking-wide text-ink-3">{label}</div>
-      <div className="mt-1 text-2xl font-semibold tabular-nums tracking-tight sm:text-3xl">{value}</div>
+      <div className="truncate pr-10 text-xs font-medium uppercase tracking-wide text-ink-3">
+        {label}
+      </div>
+      <div className="mt-1 text-2xl font-semibold tabular-nums tracking-tight sm:text-3xl">
+        {value}
+      </div>
       {detail && <div className="mt-0.5 text-sm text-ink-2">{detail}</div>}
     </Card>
   )
@@ -106,24 +119,27 @@ const CHOICE_INK: Record<Choice, string> = {
 
 /** A choice as icon plus label, so it never depends on colour alone. */
 export function ChoiceBadge({ choice, short = false }: { choice: Choice; short?: boolean }) {
+  const locale = useLocale()
+  const label = locale.choice(choice)
   return (
     <span className="inline-flex items-center gap-1 whitespace-nowrap text-sm font-medium">
       <span aria-hidden="true" className={CHOICE_INK[choice]}>
         {CHOICE_ICONS[choice]}
       </span>
-      {short ? <span className="sr-only">{CHOICE_LABELS[choice]}</span> : CHOICE_LABELS[choice]}
+      {short ? <span className="sr-only">{label}</span> : label}
     </span>
   )
 }
 
 export function ResultBadge({ result }: { result: Result }) {
+  const { t } = useLocale()
   const carried = result === 'passed'
   return (
     <span className="inline-flex items-center gap-1 whitespace-nowrap rounded-full bg-sunken px-2.5 py-0.5 text-xs font-semibold">
       <span aria-hidden="true" className={carried ? 'text-for' : 'text-against'}>
         {carried ? '✓' : '✕'}
       </span>
-      {carried ? 'Carried' : 'Not carried'}
+      {carried ? t('result.carried') : t('result.notCarried')}
     </span>
   )
 }
@@ -135,7 +151,7 @@ export interface Segment {
 }
 
 /** A thin split bar with its numbers written out underneath. */
-export function SplitBar({ segments, caption = true }: { segments: Segment[]; caption?: boolean }) {
+export function SplitBar({ segments }: { segments: Segment[] }) {
   const total = segments.reduce((sum, segment) => sum + segment.value, 0)
   const shown = segments.filter((segment) => segment.value > 0)
   return (
@@ -158,16 +174,14 @@ export function SplitBar({ segments, caption = true }: { segments: Segment[]; ca
           ))
         )}
       </div>
-      {caption && (
-        <div className="mt-1.5 flex flex-wrap gap-x-3 text-xs text-ink-2">
-          {segments.map((segment) => (
-            <span key={segment.label} className="inline-flex items-center gap-1">
-              <span aria-hidden="true" className={`size-2 rounded-xs ${segment.className}`} />
-              <span className="font-medium tabular-nums text-ink">{segment.value}</span> {segment.label}
-            </span>
-          ))}
-        </div>
-      )}
+      <div className="mt-1.5 flex flex-wrap gap-x-3 text-xs text-ink-2">
+        {segments.map((segment) => (
+          <span key={segment.label} className="inline-flex items-center gap-1">
+            <span aria-hidden="true" className={`size-2 rounded-xs ${segment.className}`} />
+            <span className="font-medium tabular-nums text-ink">{segment.value}</span> {segment.label}
+          </span>
+        ))}
+      </div>
     </div>
   )
 }

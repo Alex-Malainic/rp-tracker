@@ -1,3 +1,5 @@
+import { useLocale } from '../lib/i18n'
+
 interface Props {
   values: number[]
   /** Shared lower bound, so sparklines in a grid can be compared. */
@@ -11,8 +13,9 @@ const PAD = 4
 
 /** A small trend line in the current --party colour, with a soft fill. */
 export function Sparkline({ values, floor, label }: Props) {
+  const { t } = useLocale()
   if (values.length < 2) {
-    return <div className="grid h-14 place-items-center text-xs text-ink-3">Not enough data yet</div>
+    return <div className="grid h-14 place-items-center text-xs text-ink-3">{t('spark.empty')}</div>
   }
   const span = Math.max(1 - floor, 0.0001)
   const x = (index: number) => PAD + (index / (values.length - 1)) * (WIDTH - 2 * PAD)

@@ -3,18 +3,19 @@ import { Heatmap } from '../components/Heatmap'
 import { Sparkline } from '../components/Sparkline'
 import { AsyncView, Card, PageHeader, PartyDot, SectionTitle, SplitBar, Stat } from '../components/ui'
 import { fetchLatestSimilarity, fetchVotePage, type VotePage } from '../lib/api'
-import { formatDate, formatDelta, formatMonth, formatPercent } from '../lib/format'
 import { useAsync } from '../lib/hooks'
+import { useLocale, type MessageKey } from '../lib/i18n'
 import { isBloc, partyStyle } from '../lib/parties'
-import { tallySegments } from '../lib/tally'
 import { useData, useFilters, useVisibleParties } from '../lib/store'
+import { tallySegments } from '../lib/tally'
 import type { Party, SimilarityCell } from '../lib/types'
 
 /** With no party picked in the sidebar, show only this many widgets. */
 const DEFAULT_WIDGETS = 3
 
 export function Dashboard() {
-  const { members, cohesionByParty } = useData()
+  const { t, date } = useLocale()
+  const { membersByParty, cohesionByParty } = useData()
   const { finalOnly, selected } = useFilters()
   const visible = useVisibleParties()
   const [showAll, setShowAll] = useState(false)
@@ -34,36 +35,39 @@ export function Dashboard() {
 
   const votes = recent.status === 'ready' ? recent.data : null
   const cells = similarity.status === 'ready' ? similarity.data.cells : []
+  const year = similarity.status === 'ready' ? similarity.data.year : null
   const shownMembers = widgets.reduce(
-    (sum, party) => sum + members.filter((member) => member.party_id === party.id).length,
+    (sum, party) => sum + (membersByParty.get(party.id)?.length ?? 0),
     0,
   )
 
   return (
     <>
-      <PageHeader
-        title="Parties at a glance"
-        lede="One widget per parliamentary group: how united it votes, where it stood on recent votes and who it votes most like. The three largest are shown first; pick others in the sidebar."
-      />
+      <PageHeader title={t('dash.title')} lede={t('dash.lede')} />
 
       <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
         <Stat
-          label="Parties shown"
-          value={widgets.length}
-          detail={`of ${visible.length}${selected.size > 0 ? ' selected' : ''}`}
           icon="◧"
+          label={t('stat.partiesShown')}
+          value={widgets.length}
+          detail={t(selected.size > 0 ? 'stat.ofNSelected' : 'stat.ofN', { n: visible.length })}
         />
-        <Stat label="Members" value={shownMembers} detail="in the parties shown" icon="☺" />
+        <Stat
+          icon="☺"
+          label={t('stat.members')}
+          value={shownMembers}
+          detail={t('stat.membersDetail')}
+        />
         <Stat
           icon="◷"
-          label="Latest sitting"
-          value={votes?.votes[0] ? formatDate(votes.votes[0].sitting_date) : '–'}
+          label={t('stat.latestSitting')}
+          value={votes?.votes[0] ? date(votes.votes[0].sitting_date) : '–'}
         />
         <Stat
           icon="☰"
-          label="Recent votes compared"
+          label={t('stat.recentVotes')}
           value={votes ? votes.votes.length : '–'}
-          detail={finalOnly ? 'final votes only' : 'all votes'}
+          detail={t(finalOnly ? 'stat.finalOnly' : 'stat.allVotes')}
         />
       </div>
 
@@ -79,24 +83,15 @@ export function Dashboard() {
             onClick={() => setShowAll(!showAll)}
             className="cursor-pointer rounded-full border border-line bg-panel px-4 py-2 text-sm font-medium text-accent shadow-sm hover:bg-accent-soft"
           >
-            {showAll ? 'Show only the three largest' : `Show all ${visible.length} parties`}
+            {showAll ? t('dash.showThree') : t('dash.showAll', { n: visible.length })}
           </button>
         </div>
       )}
 
       <SectionTitle
-        note={
-          <>
-            The percentage of votes
-            {similarity.status === 'ready' && similarity.data.year
-              ? ` in ${similarity.data.year}`
-              : ''}{' '}
-            on which two groups took the same majority position. The more a cell stands out from
-            the page, the more often the two voted alike. Hover a cell for the number of votes.
-          </>
-        }
+        note={t('dash.similarityNote', { year: year ? t('dash.inYear', { year }) : '' })}
       >
-        Who votes with whom
+        {t('dash.similarityTitle')}
       </SectionTitle>
       <Card className="p-4">
         <AsyncView state={similarity}>
@@ -115,6 +110,7 @@ interface WidgetProps {
 }
 
 function PartyWidget({ party, floor, votes, cells }: WidgetProps) {
+  const { t, month, percent, delta } = useLocale()
   const { membersByParty, cohesionByParty, partyById } = useData()
   const points = cohesionByParty.get(party.id) ?? []
   const latest = points.at(-1)
@@ -129,7 +125,10 @@ function PartyWidget({ party, floor, votes, cells }: WidgetProps) {
   }
 
   const others = cells
-    .filter((cell) => cell.party_a === party.id && partyById.get(cell.party_b)?.abbreviation !== 'Neafiliati')
+    .filter((cell) => {
+      const other = partyById.get(cell.party_b)
+      return cell.party_a === party.id && other !== undefined && isBloc(other)
+    })
     .sort((a, b) => b.agreement - a.agreement)
   const closest = others[0]
   const furthest = others.length > 1 ? others.at(-1) : undefined
@@ -152,49 +151,49 @@ function PartyWidget({ party, floor, votes, cells }: WidgetProps) {
             )}
           </div>
           <span className="shrink-0 rounded-full border border-line bg-panel px-2.5 py-0.5 text-xs font-medium text-ink-2">
-            {membersByParty.get(party.id)?.length ?? 0} members
+            {t('widget.members', { n: membersByParty.get(party.id)?.length ?? 0 })}
           </span>
         </div>
 
         {bloc ? (
           <div>
             <div className="flex items-baseline justify-between gap-2">
-              <span className="text-xs font-medium uppercase tracking-wide text-ink-3">Cohesion</span>
-              {latest && <span className="text-xs text-ink-3">{formatMonth(latest.month)}</span>}
+              <span className="text-xs font-medium uppercase tracking-wide text-ink-3">
+                {t('widget.cohesion')}
+              </span>
+              {latest && <span className="text-xs text-ink-3">{month(latest.month)}</span>}
             </div>
-            <div className="mt-0.5 flex items-baseline gap-2">
+            <div className="mt-0.5 flex flex-wrap items-baseline gap-x-2">
               <span className="text-3xl font-semibold tabular-nums tracking-tight">
-                {latest ? formatPercent(latest.cohesion) : '–'}
+                {latest ? percent(latest.cohesion) : '–'}
               </span>
               {latest && previous && (
                 <span className="text-sm tabular-nums text-ink-2">
-                  {formatDelta(latest.cohesion - previous.cohesion)} on the month before
+                  {t('widget.delta', { delta: delta(latest.cohesion - previous.cohesion) })}
                 </span>
               )}
             </div>
             <Sparkline
               values={points.map((point) => point.cohesion)}
               floor={floor}
-              label={`${party.abbreviation} cohesion by month`}
+              label={t('spark.label', { party: party.abbreviation })}
             />
           </div>
         ) : (
-          <p className="text-sm text-ink-2">
-            Unaffiliated members do not vote as a bloc, so cohesion is not shown.
-          </p>
+          <p className="text-sm text-ink-2">{t('widget.notBloc')}</p>
         )}
 
         <div>
           <div className="mb-1.5 text-xs font-medium uppercase tracking-wide text-ink-3">
-            Position on recent votes
+            {t('widget.recentPositions')}
           </div>
-          <SplitBar segments={tallySegments(counts.for, counts.against, counts.abstain)} />
+          <SplitBar segments={tallySegments(t, counts.for, counts.against, counts.abstain)} />
         </div>
 
         {bloc && closest && (
           <dl className="mt-auto grid grid-cols-2 gap-3 border-t border-line pt-3 text-sm">
-            <Ally label="Votes most like" cell={closest} />
-            {furthest && <Ally label="Least like" cell={furthest} />}
+            <Ally label="widget.mostLike" cell={closest} />
+            {furthest && <Ally label="widget.leastLike" cell={furthest} />}
           </dl>
         )}
       </div>
@@ -202,18 +201,19 @@ function PartyWidget({ party, floor, votes, cells }: WidgetProps) {
   )
 }
 
-function Ally({ label, cell }: { label: string; cell: SimilarityCell }) {
+function Ally({ label, cell }: { label: MessageKey; cell: SimilarityCell }) {
+  const { t, percent } = useLocale()
   const { partyById } = useData()
   const other = partyById.get(cell.party_b)
   return (
     <div>
-      <dt className="text-xs text-ink-3">{label}</dt>
+      <dt className="text-xs text-ink-3">{t(label)}</dt>
       <dd className="mt-0.5 flex items-center gap-1.5 font-medium">
         <PartyDot party={other} />
         <a href={`#/parties/${cell.party_b}`} className="hover:underline">
           {other?.abbreviation}
         </a>
-        <span className="tabular-nums text-ink-2">{formatPercent(cell.agreement)}</span>
+        <span className="tabular-nums text-ink-2">{percent(cell.agreement)}</span>
       </dd>
     </div>
   )

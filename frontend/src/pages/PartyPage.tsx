@@ -2,16 +2,15 @@ import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YA
 import { AsyncView, Card, Notice, PageHeader, PartyDot, SectionTitle, Stat } from '../components/ui'
 import { VoteList } from '../components/VoteList'
 import { fetchLatestSimilarity, fetchVotePage } from '../lib/api'
-import { formatMonth, formatPercent } from '../lib/format'
 import { useAsync } from '../lib/hooks'
+import { useLocale } from '../lib/i18n'
 import { isBloc, partyStyle } from '../lib/parties'
 import { useData, useFilters } from '../lib/store'
 import type { CohesionPoint } from '../lib/types'
 
-const ROLE_LABELS = { deputies: 'Deputy', senate: 'Senator' }
-
 /** Everything about one group: cohesion, allies, members and recent votes. */
 export default function PartyPage({ id }: { id: number }) {
+  const { t, month, percent } = useLocale()
   const { partyById, membersByParty, cohesionByParty } = useData()
   const { finalOnly } = useFilters()
   const party = partyById.get(id)
@@ -19,9 +18,10 @@ export default function PartyPage({ id }: { id: number }) {
   const similarity = useAsync(fetchLatestSimilarity, [])
   const votes = useAsync(() => fetchVotePage(0, finalOnly), [finalOnly])
 
-  if (!party) return <Notice>No such party.</Notice>
+  if (!party) return <Notice>{t('party.none')}</Notice>
 
   const members = membersByParty.get(id) ?? []
+  const deputies = members.filter((member) => member.chamber === 'deputies').length
   const points = cohesionByParty.get(id) ?? []
   const latest = points.at(-1)
   const bloc = isBloc(party)
@@ -29,51 +29,59 @@ export default function PartyPage({ id }: { id: number }) {
   return (
     <div style={partyStyle(party)}>
       <a href="#/" className="text-sm text-accent hover:underline">
-        ← All parties
+        {t('party.back')}
       </a>
       <div className="mt-3 flex items-center gap-3">
         <span className="h-10 w-1.5 rounded-full bg-(--party)" aria-hidden="true" />
-        <PageHeader title={party.abbreviation} lede={party.name !== party.abbreviation ? party.name : undefined} />
+        <PageHeader
+          title={party.abbreviation}
+          lede={party.name !== party.abbreviation ? party.name : undefined}
+        />
       </div>
 
       <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
-        <Stat label="Members" value={members.length} detail="current legislature" icon="☺" />
         <Stat
-          label="Deputies / senators"
-          value={`${members.filter((member) => member.chamber === 'deputies').length} / ${members.filter((member) => member.chamber === 'senate').length}`}
+          icon="☺"
+          label={t('party.members')}
+          value={members.length}
+          detail={t('party.currentLegislature')}
+        />
+        <Stat
+          label={t('party.deputiesSenators')}
+          value={`${deputies} / ${members.length - deputies}`}
         />
         {bloc && (
           <Stat
-            label="Cohesion"
-            value={latest ? formatPercent(latest.cohesion) : '–'}
-            detail={latest ? `${formatMonth(latest.month)}, ${latest.votes} votes` : undefined}
+            label={t('widget.cohesion')}
+            value={latest ? percent(latest.cohesion) : '–'}
+            detail={
+              latest
+                ? t('party.cohesionDetail', { month: month(latest.month), n: latest.votes })
+                : undefined
+            }
           />
         )}
       </div>
 
       {bloc && (
         <>
-          <SectionTitle note="Of the votes its members cast each month, the share that matched the group’s majority position.">
-            Cohesion over time
-          </SectionTitle>
+          <SectionTitle note={t('party.cohesionNote')}>{t('party.cohesionTitle')}</SectionTitle>
           <Card className="p-4">
             {points.length < 2 ? (
-              <Notice>Not enough data yet.</Notice>
+              <Notice>{t('spark.empty')}</Notice>
             ) : (
               <CohesionChart points={points} />
             )}
           </Card>
 
-          <SectionTitle note="The share of votes on which this group and another took the same majority position.">
-            Votes most like
-          </SectionTitle>
+          <SectionTitle note={t('party.likeNote')}>{t('party.likeTitle')}</SectionTitle>
           <Card className="p-4">
             <AsyncView state={similarity}>
               {({ cells }) => {
                 const rows = cells
                   .filter((cell) => cell.party_a === id && partyById.has(cell.party_b))
                   .sort((a, b) => b.agreement - a.agreement)
-                if (rows.length === 0) return <Notice>No comparison data yet.</Notice>
+                if (rows.length === 0) return <Notice>{t('party.noCompare')}</Notice>
                 return (
                   <ul className="flex flex-col gap-2.5">
                     {rows.map((cell) => {
@@ -81,8 +89,11 @@ export default function PartyPage({ id }: { id: number }) {
                       return (
                         <li
                           key={cell.party_b}
-                          className="grid grid-cols-[7rem_1fr_3.5rem] items-center gap-3 text-sm"
-                          title={`Same position on ${formatPercent(cell.agreement)} of ${cell.votes} votes`}
+                          className="grid grid-cols-[7rem_1fr_3.75rem] items-center gap-3 text-sm"
+                          title={t('party.likeRow', {
+                            percent: percent(cell.agreement),
+                            n: cell.votes,
+                          })}
                         >
                           <a
                             href={`#/parties/${cell.party_b}`}
@@ -98,7 +109,7 @@ export default function PartyPage({ id }: { id: number }) {
                             />
                           </div>
                           <span className="text-right tabular-nums text-ink-2">
-                            {formatPercent(cell.agreement)}
+                            {percent(cell.agreement)}
                           </span>
                         </li>
                       )
@@ -111,14 +122,12 @@ export default function PartyPage({ id }: { id: number }) {
         </>
       )}
 
-      <SectionTitle note="The chip on each vote shows how the majority of this group voted.">
-        Recent votes
-      </SectionTitle>
+      <SectionTitle note={t('party.recentNote')}>{t('party.recentTitle')}</SectionTitle>
       <AsyncView state={votes}>{(data) => <VoteList page={data} parties={[party]} />}</AsyncView>
 
-      <SectionTitle>Members</SectionTitle>
+      <SectionTitle>{t('party.members')}</SectionTitle>
       {members.length === 0 ? (
-        <Notice>No members in the current legislature.</Notice>
+        <Notice>{t('party.noMembers')}</Notice>
       ) : (
         <ul className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
           {members.map((member) => (
@@ -128,7 +137,7 @@ export default function PartyPage({ id }: { id: number }) {
                 className="flex items-center justify-between gap-2 rounded-xl border border-line bg-panel px-3 py-2 text-sm hover:border-accent"
               >
                 <span className="truncate font-medium">{member.name}</span>
-                <span className="shrink-0 text-xs text-ink-3">{ROLE_LABELS[member.chamber]}</span>
+                <span className="shrink-0 text-xs text-ink-3">{t(`role.${member.chamber}`)}</span>
               </a>
             </li>
           ))}
@@ -139,6 +148,7 @@ export default function PartyPage({ id }: { id: number }) {
 }
 
 function CohesionChart({ points }: { points: CohesionPoint[] }) {
+  const { t, month, percent } = useLocale()
   const lowest = Math.min(...points.map((point) => point.cohesion))
   const floor = Math.max(0, Math.floor(lowest * 20) / 20 - 0.05)
   const axis = { fill: 'var(--color-ink-3)', fontSize: 12 }
@@ -149,17 +159,17 @@ function CohesionChart({ points }: { points: CohesionPoint[] }) {
         <CartesianGrid stroke="var(--color-line)" vertical={false} />
         <XAxis
           dataKey="month"
-          tickFormatter={formatMonth}
+          tickFormatter={month}
           tick={axis}
           stroke="var(--color-line)"
           minTickGap={48}
         />
         <YAxis
           domain={[floor, 1]}
-          tickFormatter={formatPercent}
+          tickFormatter={percent}
           tick={axis}
           stroke="var(--color-line)"
-          width={48}
+          width={56}
         />
         <Tooltip
           cursor={{ stroke: 'var(--color-ink-3)' }}
@@ -169,10 +179,13 @@ function CohesionChart({ points }: { points: CohesionPoint[] }) {
             borderRadius: 12,
             color: 'var(--color-ink)',
           }}
-          labelFormatter={(month) => formatMonth(String(month))}
+          labelFormatter={(value) => month(String(value))}
           formatter={(value, _name, item) => [
-            `${formatPercent(Number(value))} over ${(item.payload as CohesionPoint).votes} votes`,
-            'Cohesion',
+            t('chart.cohesionValue', {
+              percent: percent(Number(value)),
+              n: (item.payload as CohesionPoint).votes,
+            }),
+            t('widget.cohesion'),
           ]}
         />
         <Line

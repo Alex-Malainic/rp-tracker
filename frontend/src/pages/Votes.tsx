@@ -3,9 +3,11 @@ import { AsyncView, PageHeader } from '../components/ui'
 import { VoteList } from '../components/VoteList'
 import { fetchVotePage, PAGE_SIZE } from '../lib/api'
 import { useAsync } from '../lib/hooks'
+import { useLocale } from '../lib/i18n'
 import { useFilters, useVisibleParties } from '../lib/store'
 
 export function Votes() {
+  const { t } = useLocale()
   const { finalOnly } = useFilters()
   const parties = useVisibleParties()
   // Paging restarts whenever the filter changes what the list contains.
@@ -17,28 +19,22 @@ export function Votes() {
 
   return (
     <>
-      <PageHeader
-        title="Votes"
-        lede="Every electronic vote in the Chamber of Deputies and in joint sittings, newest first. Each chip shows how the majority of a group voted; pick groups in the sidebar to narrow them down."
-      />
+      <PageHeader title={t('votes.title')} lede={t('votes.lede')} />
       <AsyncView state={state}>
         {(data) => (
           <>
             <VoteList page={data} parties={parties} />
-            <p className="mt-3 max-w-[80ch] text-xs text-ink-3">
-              “Carried” means more votes for than against. The source does not publish the official
-              outcome, which for some votes depends on a qualified majority.
-            </p>
+            <p className="mt-3 max-w-[80ch] text-xs text-ink-3">{t('votes.footnote')}</p>
             <div className="mt-4 flex items-center gap-3 text-sm">
               <PagerButton disabled={page === 0} onClick={() => setPage(page - 1)}>
-                ← Newer
+                {t('pager.newer')}
               </PagerButton>
-              <span className="tabular-nums text-ink-2">Page {page + 1}</span>
+              <span className="tabular-nums text-ink-2">{t('pager.page', { n: page + 1 })}</span>
               <PagerButton
                 disabled={data.votes.length < PAGE_SIZE}
                 onClick={() => setPage(page + 1)}
               >
-                Older →
+                {t('pager.older')}
               </PagerButton>
             </div>
           </>
