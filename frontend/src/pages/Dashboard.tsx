@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Heatmap } from '../components/Heatmap'
+import { PairInsights } from '../components/PairInsights'
 import { Sparkline } from '../components/Sparkline'
 import { AsyncView, Card, PageHeader, PartyDot, SectionTitle, SplitBar, Stat } from '../components/ui'
 import { fetchLatestSimilarity, fetchVotePage, type VotePage } from '../lib/api'
@@ -93,9 +94,17 @@ export function Dashboard() {
       >
         {t('dash.similarityTitle')}
       </SectionTitle>
-      <Card className="p-4">
+      <Card className="p-5">
         <AsyncView state={similarity}>
-          {(data) => <Heatmap parties={visible.filter(isBloc)} cells={data.cells} />}
+          {(data) => {
+            const blocs = visible.filter(isBloc)
+            return (
+              <div className="grid items-start gap-8 lg:grid-cols-[auto_minmax(0,1fr)]">
+                <Heatmap parties={blocs} cells={data.cells} />
+                <PairInsights parties={blocs} cells={data.cells} />
+              </div>
+            )
+          }}
         </AsyncView>
       </Card>
     </>

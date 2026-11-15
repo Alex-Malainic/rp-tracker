@@ -107,6 +107,9 @@ const ro = {
     'Procentul voturilor{year} la care două grupuri au avut aceeași poziție majoritară. Cu cât o celulă iese mai mult în evidență față de pagină, cu atât cele două au votat mai des la fel. Treci cu mouse-ul peste o celulă pentru numărul de voturi.',
   'dash.inYear': ' din {year}',
 
+  'pairs.closest': 'Votează cel mai des la fel',
+  'pairs.furthest': 'Votează cel mai rar la fel',
+  'pairs.and': 'și',
   'widget.members': '{n} membri',
   'widget.cohesion': 'Coeziune',
   'widget.delta': '{delta} față de luna anterioară',
@@ -294,6 +297,9 @@ const en: Record<MessageKey, string> = {
     'The percentage of votes{year} on which two groups took the same majority position. The more a cell stands out from the page, the more often the two voted alike. Hover a cell for the number of votes.',
   'dash.inYear': ' in {year}',
 
+  'pairs.closest': 'Vote together most often',
+  'pairs.furthest': 'Vote together least often',
+  'pairs.and': 'and',
   'widget.members': '{n} members',
   'widget.cohesion': 'Cohesion',
   'widget.delta': '{delta} on the month before',

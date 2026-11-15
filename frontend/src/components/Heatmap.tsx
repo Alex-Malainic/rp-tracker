@@ -42,7 +42,7 @@ export function Heatmap({ parties, cells }: { parties: Party[]; cells: Similarit
                   <td
                     key={column.id}
                     style={heatColors(cell.agreement, dark)}
-                    className="h-9 min-w-12 rounded-md text-center font-medium tabular-nums"
+                    className="h-11 min-w-14 rounded-lg text-center text-sm font-medium tabular-nums"
                     title={t('heatmap.cell', {
                       a: row.abbreviation,
                       b: column.abbreviation,
