@@ -11,8 +11,9 @@ import os
 from itertools import batched
 from typing import Any
 
-from ingestion.models import Ballot, Chamber, Vote
 from supabase import Client, create_client
+
+from ingestion.models import Ballot, Chamber, Vote
 
 log = logging.getLogger(__name__)
 

@@ -35,3 +35,7 @@ target-version = "py312"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "SIM", "C4", "RUF"]
+
+[tool.ruff.lint.isort]
+# The supabase/ folder holds SQL migrations; the import is the PyPI package.
+known-third-party = ["supabase"]
