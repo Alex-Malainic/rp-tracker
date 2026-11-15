@@ -9,6 +9,7 @@ import { useAppDataLoader } from './lib/store'
 import { supabase } from './lib/supabase'
 import { Dashboard } from './pages/Dashboard'
 import { MemberPage, Members } from './pages/Members'
+import { RegionPage, Regions } from './pages/Regions'
 import { Votes } from './pages/Votes'
 
 // The charting library is most of the bundle; load it only where it is used.
@@ -20,6 +21,9 @@ function Page({ path }: { path: string }) {
   if (party) return <PartyPage id={Number(party[1])} />
   const member = /^\/members\/(\d+)$/.exec(path)
   if (member) return <MemberPage id={Number(member[1])} />
+  const region = /^\/regions\/([a-z-]+)$/.exec(path)
+  if (region) return <RegionPage slug={region[1]} />
+  if (path === '/regions') return <Regions />
   if (path === '/members') return <Members />
   if (path === '/votes') return <Votes />
   if (path === '/') return <Dashboard />
@@ -30,6 +34,7 @@ function Page({ path }: { path: string }) {
 function sectionOf(path: string): string {
   if (path.startsWith('/members')) return '/members'
   if (path.startsWith('/votes')) return '/votes'
+  if (path.startsWith('/regions')) return '/regions'
   return '/'
 }
 

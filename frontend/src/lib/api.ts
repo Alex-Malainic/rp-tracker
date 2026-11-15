@@ -2,6 +2,9 @@ import { supabase } from './supabase'
 import type {
   Attendance,
   CohesionPoint,
+  Constituency,
+  ConstituencyStats,
+  ConstituencyTally,
   Member,
   MemberBallot,
   Party,
@@ -117,4 +120,27 @@ export async function fetchLatestSimilarity(): Promise<{ year: number | null; ce
   const [year] = await fetchSimilarityYears()
   if (year === undefined) return { year: null, cells: [] }
   return { year, cells: await fetchSimilarity(year) }
+}
+
+export async function fetchConstituencies(): Promise<Constituency[]> {
+  return rows(await db().from('constituencies').select('*').order('name'))
+}
+
+export async function fetchConstituencyStats(): Promise<ConstituencyStats[]> {
+  return rows(await db().from('constituency_stats').select('*'))
+}
+
+/** How the given constituencies voted on the given votes. */
+export async function fetchConstituencyTallies(
+  voteIds: number[],
+  constituencyIds: number[],
+): Promise<ConstituencyTally[]> {
+  if (voteIds.length === 0 || constituencyIds.length === 0) return []
+  return rows(
+    await db()
+      .from('constituency_vote_tallies')
+      .select('*')
+      .in('vote_id', voteIds)
+      .in('constituency_id', constituencyIds),
+  )
 }

@@ -7,6 +7,7 @@ import { PartyDot } from './ui'
 
 const NAV: { path: string; label: MessageKey; icon: string }[] = [
   { path: '/', label: 'nav.parties', icon: '◧' },
+  { path: '/regions', label: 'nav.regions', icon: '◎' },
   { path: '/votes', label: 'nav.votes', icon: '☰' },
   { path: '/members', label: 'nav.members', icon: '☺' },
 ]

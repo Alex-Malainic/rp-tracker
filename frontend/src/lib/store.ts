@@ -1,6 +1,13 @@
 import { createContext, useContext } from 'react'
-import { fetchCohesion, fetchMembers, fetchParties } from './api'
+import {
+  fetchCohesion,
+  fetchConstituencies,
+  fetchConstituencyStats,
+  fetchMembers,
+  fetchParties,
+} from './api'
 import { useAsync, type Async } from './hooks'
+import { buildRegions, type Region } from './regions'
 import type { CohesionPoint, Member, Party } from './types'
 
 /** Reference data every page needs, loaded once. */
@@ -10,6 +17,8 @@ export interface AppData {
   members: Member[]
   membersByParty: Map<number, Member[]>
   cohesionByParty: Map<number, CohesionPoint[]>
+  /** Regions with their constituencies; empty until constituencies are loaded. */
+  regions: Region[]
 }
 
 /** The sidebar's filters, shared by all pages. */
@@ -37,10 +46,12 @@ function groupBy<T>(items: T[], key: (item: T) => number): Map<number, T[]> {
 
 export function useAppDataLoader(): Async<AppData> {
   return useAsync(async () => {
-    const [parties, members, cohesion] = await Promise.all([
+    const [parties, members, cohesion, constituencies, constituencyStats] = await Promise.all([
       fetchParties(),
       fetchMembers(),
       fetchCohesion(),
+      fetchConstituencies(),
+      fetchConstituencyStats(),
     ])
     const membersByParty = groupBy(members, (member) => member.party_id)
     // Largest groups first: that is the order people expect to read them in.
@@ -55,6 +66,7 @@ export function useAppDataLoader(): Async<AppData> {
       members,
       membersByParty,
       cohesionByParty: groupBy(cohesion, (point) => point.party_id),
+      regions: buildRegions(constituencies, constituencyStats, members),
     }
   }, [])
 }

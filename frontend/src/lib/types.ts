@@ -56,6 +56,43 @@ export interface Member {
   source_id: number
   name: string
   party_id: number
+  /** Null for members elected nationally (the national minorities). */
+  constituency_id: number | null
+}
+
+/** One of the 43 electoral constituencies: a county, Bucharest or the diaspora. */
+export interface Constituency {
+  id: number
+  name: string
+  /** Development region as a slug, e.g. "nord-est". */
+  region: string
+}
+
+/** Attendance and dissent summed over a constituency's members. */
+export interface ConstituencyStats {
+  constituency_id: number
+  members: number
+  eligible_votes: number
+  present: number
+  voted: number
+  against_party: number
+}
+
+/** Counts of the three choices a member can cast. */
+export interface Tally {
+  votes_for: number
+  votes_against: number
+  abstained: number
+}
+
+/** How a constituency's members voted on one vote. */
+export interface ConstituencyTally {
+  vote_id: number
+  constituency_id: number
+  votes_for: number
+  votes_against: number
+  abstained: number
+  not_voted: number
 }
 
 export interface Attendance {

@@ -2,7 +2,8 @@
 
 How the Romanian Parliament votes, updated daily: every electronic vote in the
 Chamber of Deputies and in joint sittings, with each member's ballot, party
-cohesion over time, how often parties vote alike, and attendance per member.
+cohesion over time, how often parties vote alike, attendance per member, and
+how each region's members vote.
 
 Live site: <https://alex-malainic.github.io/rp-tracker/> (once GitHub Pages is
 enabled, see [Going live](#going-live)).
@@ -77,6 +78,9 @@ The data source, its formats and its many quirks are documented in
 - **Attendance** is inferred. The source lists only members who were present,
   so a member is expected at every vote of their chamber between their first
   and last recorded ballot. Senators appear only in joint sittings.
+- **Regions** are the eight development regions plus the diaspora. A member
+  belongs to the region of the constituency that elected them; the national
+  minorities' deputies are elected nationally and belong to none.
 
 ## Local setup
 
@@ -96,6 +100,7 @@ export SUPABASE_URL=https://<project>.supabase.co
 export SUPABASE_SERVICE_KEY=<service role key>
 uv run python -m ingestion --date 2026-11-10
 uv run python -m ingestion --from 2024-12-01 --to 2026-11-15   # backfill
+uv run python -m ingestion --constituencies                    # who was elected where
 
 # API (optional)
 ADMIN_TOKEN=<any secret> uv run uvicorn api.main:app --reload
@@ -109,7 +114,7 @@ npm run dev
 
 ## Going live
 
-1. Create a Supabase project and run the two files in `supabase/migrations/`
+1. Create a Supabase project and run the files in `supabase/migrations/`
    in order (SQL editor, or `supabase db push`).
 2. In the GitHub repository settings add:
    - secrets `SUPABASE_URL` and `SUPABASE_SERVICE_KEY` (used by ingestion);
@@ -117,7 +122,7 @@ npm run dev
      both are public by design).
 3. Under Settings → Pages, set the source to "GitHub Actions".
 4. Run the **Ingest** workflow manually with `date` and `to` set to backfill a
-   range, then let the daily schedule take over.
+   range and `constituencies` ticked, then let the daily schedule take over.
 
 Never commit the service role key: it bypasses row level security.
 
