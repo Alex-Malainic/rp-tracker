@@ -1,0 +1,70 @@
+name: Ingest
+
+on:
+  schedule:
+    # 20:00 UTC is 22:00 in Bucharest in winter and 23:00 in summer, after
+    # sittings have ended.
+    - cron: "0 20 * * *"
+  workflow_dispatch:
+    inputs:
+      date:
+        description: "Day to ingest (YYYY-MM-DD). Empty: the last three days."
+        required: false
+      to:
+        description: "Optional last day (YYYY-MM-DD), to ingest a range starting at 'date'."
+        required: false
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: ingest
+  cancel-in-progress: false
+
+jobs:
+  ingest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 345
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+      - run: uv sync --locked --no-dev
+
+      - name: Run ingestion
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          FROM_DATE: ${{ inputs.date }}
+          TO_DATE: ${{ inputs.to }}
+        run: |
+          if [ -n "$FROM_DATE" ] && [ -n "$TO_DATE" ]; then
+            args=(--from "$FROM_DATE" --to "$TO_DATE")
+          elif [ -n "$FROM_DATE" ]; then
+            args=(--date "$FROM_DATE")
+          else
+            # Re-reading a few days is free (upserts) and covers a failed run
+            # or a late correction at the source.
+            args=(--from "$(date -u -d '3 days ago' +%F)")
+          fi
+          uv run --no-dev python -m ingestion "${args[@]}"
+
+      - name: Open an issue on failure
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          title="Ingestion is failing"
+          existing=$(gh issue list --repo "$GITHUB_REPOSITORY" --state open \
+            --search "\"$title\" in:title" --json number --jq '.[0].number')
+          if [ -n "$existing" ]; then
+            gh issue comment "$existing" --repo "$GITHUB_REPOSITORY" --body "Failed again: $RUN_URL"
+          else
+            gh issue create --repo "$GITHUB_REPOSITORY" --title "$title" \
+              --body "The ingestion workflow failed: $RUN_URL
+
+          The source format may have changed. See docs/data-source.md."
+          fi
