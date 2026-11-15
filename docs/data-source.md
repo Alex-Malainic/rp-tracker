@@ -1,7 +1,9 @@
 # Data source
 
-Findings from Step 0 of the [brief](brief.md), checked on 2026-11-15 with
-`python -m ingestion.probe <date>`.
+Findings from Step 0 of the [brief](brief.md), checked on 2026-11-15 against
+the live site. To repeat the check for any day, run
+`python -m ingestion --date <YYYY-MM-DD> --dry-run`, which fetches the day and
+verifies every vote without writing anything.
 
 **Verdict: per-MP vote data is available** from the Chamber of Deputies site
 (cdep.ro) for every electronic vote, including joint sittings with the Senate.
@@ -14,17 +16,37 @@ paths (without `/ords`) return 404.
 | Purpose | Path | Format |
 |---|---|---|
 | Sitting days in a month | `evot2015.zile_vot?lu=<month>&an=<year>` | text: `,20261104,20261111,...` (unordered) |
-| Votes on a day | `evot2015.xml?par1=1&par2=<YYYYMMDD>` | XML |
-| Ballots for a vote | `evot2015.xml?par1=2&par2=<vote id>` | XML |
-| Ballots for a vote, with MP ids | `evot2015.nominal?idv=<vote id>&idl=1` | HTML |
-| Day page for humans | `evot2015.data?dat=<YYYYMMDD>&idl=1` | HTML |
+| Votes on a day | `evot2015.data?dat=<YYYYMMDD>&idl=1` | HTML |
+| Ballots for a vote | `evot2015.nominal?idv=<vote id>&idl=1` | HTML |
+| Votes on a day, reduced | `evot2015.xml?par1=1&par2=<YYYYMMDD>` | XML |
+| Ballots for a vote, reduced | `evot2015.xml?par1=2&par2=<vote id>` | XML |
+
+**Ingestion reads the two HTML pages, not the XML.** The XML is easier to
+parse but leaves out what the charts need: member ids, the "Vot final" marker
+and the bill each vote belongs to.
 
 No authentication, no API key. The calendar's year range is 2006 onwards; the
 probe was run against 2017, 2025 and 2026.
 
 ## Fields
 
-### Votes on a day (`ROWSET/ROW`)
+### Votes on a day (HTML)
+
+One table row per vote, with cells identified by `data-label`:
+
+| `data-label` | Meaning |
+|---|---|
+| `Ora` | Time `hh:mi`, or only a `>>>` link when the vote has no time |
+| `Id vot` | Vote id, prefixed with `CD+SE` for joint sittings |
+| `Descriere` | Up to three lines: kind (`Vot final`), bill reference, what was put to the vote (`adoptare`) |
+| `Prezenta` | Members present |
+| `Pentru` / `Împotriva` / `Abtineri` / `Nu au votat*` | Tallies; zero is written as `-` |
+
+A row with `data-label="Titlu PL"` (bill) or `"Titlu PH"` (resolution) may
+come *before* a vote row. It holds the bill's title and a link to its page,
+and applies to the next vote row only.
+
+### Votes on a day (XML, `ROWSET/ROW`)
 
 | Element | Meaning |
 |---|---|
@@ -36,7 +58,7 @@ probe was run against 2017, 2025 and 2026.
 | `AU_VOTAT_DA` / `AU_VOTAT_NU` / `AU_VOTAT_AB` | For / against / abstain |
 | `NU_AU_VOTAT` | Present but did not vote |
 
-### Ballots (`ROWSET/ROW`)
+### Ballots (XML `ROWSET/ROW`, and the HTML table)
 
 `VOTID`, `NUME` (surname), `PRENUME` (given names), `GRUP` (parliamentary
 group), `CAMERA` (`2` deputy, `1` senator), `VOT` (`DA`, `NU`, `AB`, `-`).
@@ -57,7 +79,10 @@ names only.
 - **No sitting returns an empty body** with HTTP 200, not an empty `ROWSET`.
 - **Missing elements.** Tally elements are omitted rather than zeroed when the
   source has no value (vote 16335, "Vot test 2", has only `PREZENTI`).
-- **Test votes exist** ("Vot test 2") and should be filtered out.
+- **Test votes exist** ("Vot test 2") and are skipped.
+- **Attendance checks are listed as votes** ("Prezenta", "Verificare
+  prezenta"). Their tallies are all `-` and their nominal page has no vote
+  column. They are skipped.
 - **Time can be `00:00`.** All eight votes on 2026-11-11 have no time of day.
   Do not rely on time for ordering; use `VOTID`.
 - **Rows are not sorted** by id or time.
@@ -68,8 +93,8 @@ names only.
 - **No adopted/rejected outcome**, only tallies. Whether a vote passed depends
   on the majority required, which the source does not state.
 - **Many votes are procedural** ("Aprobare ordine de zi", "Propunere 1",
-  "timp dezbatere"). Bill votes can usually be recognised by a reference such
-  as `PL-x 146/2025` in the description.
+  "timp dezbatere"). Final votes on a bill start with `Vot final` on the HTML
+  day page; the XML description drops that marker.
 - **Member ids are per legislature.** `idm=1&cam=2&leg=2024` and
   `idm=1&cam=2&leg=2016` are different people.
 
@@ -82,8 +107,9 @@ equalled the official tallies.
 | Day | Sitting | Votes that day | Votes checked | Mismatches |
 |---|---|---|---|---|
 | 2026-11-10 | joint | 13 | 13 | 0 |
-| 2026-11-11 | Chamber | 8 | 3 | 0 |
-| 2025-06-18 | Chamber | 15 | 3 | 0 |
+| 2026-11-11 | Chamber | 8 | 7 (1 attendance check) | 0 |
+| 2025-06-18 | Chamber | 15 | 15 | 0 |
+| 2024-12-23 | Chamber | 7 | 6 (1 test vote) | 0 |
 | 2017-03-07 | Chamber | 27 | 2 | 0 |
 
 2025-02-11, 2023-10-17 and 2026-11-14 had no sitting and returned empty
@@ -94,7 +120,7 @@ responses.
 - Sittings are typically two or three days a week while Parliament is in
   session, with 5 to 30 votes per sitting day.
 - Responses took 0.3 to 0.6 seconds. No rate limiting was seen at one request
-  per second; about 120 requests were made in total. Rate limits at higher
+  per second; about 200 requests were made in total. Rate limits at higher
   volumes are untested, so ingestion should keep a delay of at least one second.
 - A daily run needs one calendar request, one day request and one or two
   requests per vote.
