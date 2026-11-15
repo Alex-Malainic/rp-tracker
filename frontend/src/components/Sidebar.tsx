@@ -30,7 +30,7 @@ export function Sidebar({ section, onNavigate }: { section: string; onNavigate: 
   return (
     <div className="quiet-scroll flex h-full flex-col gap-6 overflow-y-auto p-4">
       <a href="#/" onClick={onNavigate} className="flex items-center gap-2.5 px-2 pt-1">
-        <span className="grid size-8 place-items-center rounded-lg bg-accent text-sm font-bold text-panel">
+        <span className="bg-brand grid size-9 place-items-center rounded-xl text-sm font-bold text-white shadow-md shadow-accent/30 dark:text-canvas">
           RP
         </span>
         <span className="text-sm font-semibold leading-tight">
@@ -50,7 +50,9 @@ export function Sidebar({ section, onNavigate }: { section: string; onNavigate: 
               onClick={onNavigate}
               aria-current={active ? 'page' : undefined}
               className={`flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
-                active ? 'bg-accent-soft text-accent' : 'text-ink-2 hover:bg-sunken hover:text-ink'
+                active
+                  ? 'bg-brand text-white shadow-md shadow-accent/25 dark:text-canvas'
+                  : 'text-ink-2 hover:bg-sunken hover:text-ink'
               }`}
             >
               <span aria-hidden="true" className="w-4 text-center">

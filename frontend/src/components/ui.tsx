@@ -6,7 +6,7 @@ import type { Choice, Party, Result } from '../lib/types'
 
 export function Card({ children, className = '' }: { children: ReactNode; className?: string }) {
   return (
-    <div className={`rounded-2xl border border-line bg-panel shadow-xs ${className}`}>
+    <div className={`rounded-2xl border border-line bg-panel shadow-sm shadow-accent/5 ${className}`}>
       {children}
     </div>
   )
@@ -69,10 +69,27 @@ export function PartyDot({ party }: { party: Party | undefined }) {
   )
 }
 
-export function Stat({ label, value, detail }: { label: string; value: ReactNode; detail?: ReactNode }) {
+interface StatProps {
+  label: string
+  value: ReactNode
+  detail?: ReactNode
+  /** A single decorative glyph shown in the tile's corner. */
+  icon?: string
+}
+
+export function Stat({ label, value, detail, icon }: StatProps) {
   return (
-    <Card className="min-w-0 p-4">
-      <div className="truncate text-xs font-medium uppercase tracking-wide text-ink-3">{label}</div>
+    <Card className="relative min-w-0 overflow-hidden p-4">
+      <div className="bg-brand absolute inset-x-0 top-0 h-0.5" aria-hidden="true" />
+      {icon && (
+        <span
+          aria-hidden="true"
+          className="absolute right-3 top-3 grid size-8 place-items-center rounded-xl bg-accent-soft text-sm text-accent"
+        >
+          {icon}
+        </span>
+      )}
+      <div className="truncate pr-10 text-xs font-medium uppercase tracking-wide text-ink-3">{label}</div>
       <div className="mt-1 text-2xl font-semibold tabular-nums tracking-tight sm:text-3xl">{value}</div>
       {detail && <div className="mt-0.5 text-sm text-ink-2">{detail}</div>}
     </Card>

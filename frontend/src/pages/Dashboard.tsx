@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { Heatmap } from '../components/Heatmap'
 import { Sparkline } from '../components/Sparkline'
 import { AsyncView, Card, PageHeader, PartyDot, SectionTitle, SplitBar, Stat } from '../components/ui'
@@ -9,10 +10,20 @@ import { tallySegments } from '../lib/tally'
 import { useData, useFilters, useVisibleParties } from '../lib/store'
 import type { Party, SimilarityCell } from '../lib/types'
 
+/** With no party picked in the sidebar, show only this many widgets. */
+const DEFAULT_WIDGETS = 3
+
 export function Dashboard() {
   const { members, cohesionByParty } = useData()
-  const { finalOnly } = useFilters()
+  const { finalOnly, selected } = useFilters()
   const visible = useVisibleParties()
+  const [showAll, setShowAll] = useState(false)
+
+  // Parties arrive largest first. Until the visitor picks some, or asks for
+  // all, the page opens on the three largest real groups.
+  const canCollapse = selected.size === 0 && visible.length > DEFAULT_WIDGETS
+  const widgets =
+    canCollapse && !showAll ? visible.filter(isBloc).slice(0, DEFAULT_WIDGETS) : visible
 
   const recent = useAsync(() => fetchVotePage(0, finalOnly), [finalOnly])
   const similarity = useAsync(fetchLatestSimilarity, [])
@@ -23,7 +34,7 @@ export function Dashboard() {
 
   const votes = recent.status === 'ready' ? recent.data : null
   const cells = similarity.status === 'ready' ? similarity.data.cells : []
-  const shownMembers = visible.reduce(
+  const shownMembers = widgets.reduce(
     (sum, party) => sum + members.filter((member) => member.party_id === party.id).length,
     0,
   )
@@ -32,28 +43,46 @@ export function Dashboard() {
     <>
       <PageHeader
         title="Parties at a glance"
-        lede="One widget per parliamentary group: how united it votes, where it stood on recent votes and who it votes most like. Use the sidebar to focus on a few."
+        lede="One widget per parliamentary group: how united it votes, where it stood on recent votes and who it votes most like. The three largest are shown first; pick others in the sidebar."
       />
 
       <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
-        <Stat label="Parties shown" value={visible.length} />
-        <Stat label="Members" value={shownMembers} detail="current legislature" />
         <Stat
+          label="Parties shown"
+          value={widgets.length}
+          detail={`of ${visible.length}${selected.size > 0 ? ' selected' : ''}`}
+          icon="◧"
+        />
+        <Stat label="Members" value={shownMembers} detail="in the parties shown" icon="☺" />
+        <Stat
+          icon="◷"
           label="Latest sitting"
           value={votes?.votes[0] ? formatDate(votes.votes[0].sitting_date) : '–'}
         />
         <Stat
+          icon="☰"
           label="Recent votes compared"
           value={votes ? votes.votes.length : '–'}
           detail={finalOnly ? 'final votes only' : 'all votes'}
         />
       </div>
 
-      <div className="mt-6 grid gap-4 md:grid-cols-2 2xl:grid-cols-3">
-        {visible.map((party) => (
+      <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+        {widgets.map((party) => (
           <PartyWidget key={party.id} party={party} floor={floor} votes={votes} cells={cells} />
         ))}
       </div>
+      {canCollapse && (
+        <div className="mt-4 flex justify-center">
+          <button
+            type="button"
+            onClick={() => setShowAll(!showAll)}
+            className="cursor-pointer rounded-full border border-line bg-panel px-4 py-2 text-sm font-medium text-accent shadow-sm hover:bg-accent-soft"
+          >
+            {showAll ? 'Show only the three largest' : `Show all ${visible.length} parties`}
+          </button>
+        </div>
+      )}
 
       <SectionTitle
         note={
@@ -106,9 +135,9 @@ function PartyWidget({ party, floor, votes, cells }: WidgetProps) {
   const furthest = others.length > 1 ? others.at(-1) : undefined
 
   return (
-    <Card className="flex flex-col overflow-hidden">
-      <div style={partyStyle(party)} className="h-1 bg-(--party)" />
-      <div className="flex grow flex-col gap-4 p-4" style={partyStyle(party)}>
+    <Card className="flex flex-col overflow-hidden transition hover:-translate-y-0.5 hover:shadow-lg hover:shadow-accent/10">
+      <div style={partyStyle(party)} className="h-1.5 bg-(--party)" />
+      <div className="party-wash flex grow flex-col gap-4 p-5" style={partyStyle(party)}>
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <a
@@ -122,7 +151,7 @@ function PartyWidget({ party, floor, votes, cells }: WidgetProps) {
               <div className="truncate text-sm text-ink-2">{party.name}</div>
             )}
           </div>
-          <span className="shrink-0 rounded-full bg-sunken px-2.5 py-0.5 text-xs font-medium text-ink-2">
+          <span className="shrink-0 rounded-full border border-line bg-panel px-2.5 py-0.5 text-xs font-medium text-ink-2">
             {membersByParty.get(party.id)?.length ?? 0} members
           </span>
         </div>

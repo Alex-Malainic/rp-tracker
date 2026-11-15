@@ -37,7 +37,7 @@ export default function PartyPage({ id }: { id: number }) {
       </div>
 
       <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
-        <Stat label="Members" value={members.length} detail="current legislature" />
+        <Stat label="Members" value={members.length} detail="current legislature" icon="☺" />
         <Stat
           label="Deputies / senators"
           value={`${members.filter((member) => member.chamber === 'deputies').length} / ${members.filter((member) => member.chamber === 'senate').length}`}
@@ -93,7 +93,7 @@ export default function PartyPage({ id }: { id: number }) {
                           </a>
                           <div className="h-2 overflow-hidden rounded-full bg-sunken">
                             <div
-                              className="h-full rounded-full bg-accent"
+                              className="bg-brand h-full rounded-full"
                               style={{ width: `${cell.agreement * 100}%` }}
                             />
                           </div>
