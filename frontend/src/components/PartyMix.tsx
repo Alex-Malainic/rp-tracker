@@ -74,8 +74,8 @@ export function PartyLegend({ members, label }: { members: Member[]; label: stri
 
   return (
     <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 rounded-xl border border-line bg-panel px-4 py-2.5 text-sm">
-      <span className="text-xs font-medium uppercase tracking-wide text-ink-3">{label}</span>
-      <ul className="flex flex-wrap gap-x-4 gap-y-1">
+      {/* The label is for screen readers; on screen the dots speak for themselves. */}
+      <ul aria-label={label} className="flex flex-wrap gap-x-4 gap-y-1">
         {shown.map((party) => (
           <li key={party.id} className="inline-flex items-center gap-1.5 font-medium">
             <PartyDot party={party} />
