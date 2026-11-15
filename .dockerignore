@@ -1,0 +1,9 @@
+.git
+.venv
+.idea
+frontend
+tests
+docs
+supabase
+__pycache__
+.env*
