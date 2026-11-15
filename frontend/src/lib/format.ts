@@ -38,3 +38,18 @@ export function heatColors(share: number, dark: boolean): { background: string; 
   const index = dark ? RAMP.length - 1 - step : step
   return { background: RAMP[index], color: index >= 6 ? '#ffffff' : '#0b0b0b' }
 }
+
+/** Lower-case and strip diacritics, so "tusa" finds "Tuşa". */
+export function plain(text: string): string {
+  return text
+    .normalize('NFD')
+    .replace(/\p{M}/gu, '')
+    .toLowerCase()
+}
+
+/** A change between two shares, in percentage points: "+1.2 pts". */
+export function formatDelta(change: number): string {
+  const points = change * 100
+  const sign = points > 0 ? '+' : points < 0 ? '−' : '±'
+  return `${sign}${Math.abs(points).toFixed(1)} pts`
+}

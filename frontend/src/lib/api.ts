@@ -93,3 +93,28 @@ export async function fetchMemberBallots(memberId: number): Promise<MemberBallot
       .limit(PAGE_SIZE),
   )
 }
+
+export interface VotePage {
+  votes: Vote[]
+  /** Group positions per vote id, then per party id. */
+  positions: Map<number, Map<number, PartyPosition>>
+}
+
+/** A page of votes together with every group's position on them. */
+export async function fetchVotePage(page: number, finalOnly: boolean): Promise<VotePage> {
+  const votes = await fetchVotes(page, finalOnly)
+  const positions = new Map<number, Map<number, PartyPosition>>()
+  for (const position of await fetchPositions(votes.map((vote) => vote.id))) {
+    const byParty = positions.get(position.vote_id) ?? new Map<number, PartyPosition>()
+    byParty.set(position.party_id, position)
+    positions.set(position.vote_id, byParty)
+  }
+  return { votes, positions }
+}
+
+/** Similarity cells for the most recent year that has any, with that year. */
+export async function fetchLatestSimilarity(): Promise<{ year: number | null; cells: SimilarityCell[] }> {
+  const [year] = await fetchSimilarityYears()
+  if (year === undefined) return { year: null, cells: [] }
+  return { year, cells: await fetchSimilarity(year) }
+}

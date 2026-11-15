@@ -1,313 +1,36 @@
+@import 'tailwindcss';
+
+/* Design tokens. light-dark() follows the visitor's system theme. */
+@theme {
+  --font-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+
+  --color-canvas: light-dark(#f4f4f1, #111110);
+  --color-panel: light-dark(#ffffff, #1b1b1a);
+  --color-sunken: light-dark(#f0efec, #232322);
+  --color-line: light-dark(#e4e3df, #2f2f2d);
+  --color-ink: light-dark(#0b0b0b, #f0efec);
+  --color-ink-2: light-dark(#52514e, #c3c2b7);
+  --color-ink-3: light-dark(#6f6e69, #9c9b93);
+  --color-accent: light-dark(#1c5cab, #86b6ef);
+  --color-accent-soft: light-dark(#e6f0fd, #16283f);
+
+  /* Status: always shown with an icon and a label, never alone. */
+  --color-for: light-dark(#0a7a0a, #0ca30c);
+  --color-against: light-dark(#d03b3b, #e66767);
+  --color-abstain: light-dark(#a3a29c, #6f6e69);
+  --color-warn: light-dark(#8a5a00, #fab219);
+}
+
 :root {
   color-scheme: light dark;
-  --surface: #fcfcfb;
-  --surface-raised: #ffffff;
-  --border: #e3e2de;
-  --grid: #e9e8e4;
-  --text-primary: #0b0b0b;
-  --text-secondary: #52514e;
-  --text-muted: #6f6e69;
-  --link: #1c5cab;
-  --series-1: #2a78d6;
-  --good: #006300;
-  --critical: #b02a2a;
-  --warning-ink: #8a5a00;
-
-  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
-  font-size: 16px;
-  line-height: 1.5;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --surface: #1a1a19;
-    --surface-raised: #232322;
-    --border: #383835;
-    --grid: #2e2e2c;
-    --text-primary: #f0efec;
-    --text-secondary: #c3c2b7;
-    --text-muted: #9c9b93;
-    --link: #86b6ef;
-    --series-1: #3987e5;
-    --good: #0ca30c;
-    --critical: #e66767;
-    --warning-ink: #fab219;
-  }
-}
-
-* {
-  box-sizing: border-box;
 }
 
 body {
-  margin: 0;
-  background: var(--surface);
-  color: var(--text-primary);
+  @apply bg-canvas text-ink font-sans antialiased;
 }
 
-a {
-  color: var(--link);
-}
-
-main,
-.site-header,
-.site-footer {
-  max-width: 1100px;
-  margin: 0 auto;
-  padding: 0 16px;
-}
-
-.site-header {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 8px 24px;
-  padding-top: 16px;
-  padding-bottom: 12px;
-  border-bottom: 1px solid var(--border);
-}
-
-.site-title {
-  font-weight: 700;
-  font-size: 1.1rem;
-  color: var(--text-primary);
-  text-decoration: none;
-}
-
-nav {
-  display: flex;
-  gap: 16px;
-}
-
-nav a {
-  text-decoration: none;
-  padding-bottom: 2px;
-}
-
-nav a[aria-current='page'] {
-  color: var(--text-primary);
-  font-weight: 600;
-  border-bottom: 2px solid var(--series-1);
-}
-
-main {
-  padding-top: 8px;
-  padding-bottom: 32px;
-  min-height: 60vh;
-}
-
-.site-footer {
-  padding-top: 16px;
-  padding-bottom: 32px;
-  border-top: 1px solid var(--border);
-  color: var(--text-muted);
-  font-size: 0.875rem;
-}
-
-h1 {
-  font-size: 1.6rem;
-  margin: 24px 0 4px;
-}
-
-h2 {
-  font-size: 1.2rem;
-  margin: 32px 0 4px;
-}
-
-.lede {
-  color: var(--text-secondary);
-  margin: 0 0 16px;
-  max-width: 70ch;
-}
-
-.muted {
-  color: var(--text-muted);
-  font-size: 0.875rem;
-}
-
-.footnote {
-  color: var(--text-muted);
-  font-size: 0.8125rem;
-  max-width: 80ch;
-}
-
-.notice {
-  padding: 12px 16px;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  color: var(--text-secondary);
-}
-
-.notice-error {
-  border-color: var(--critical);
-  color: var(--text-primary);
-}
-
-.filters {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px 24px;
-  align-items: center;
-  margin: 12px 0;
-}
-
-select,
-input[type='search'],
-button {
-  font: inherit;
-  color: inherit;
-  background: var(--surface-raised);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  padding: 4px 8px;
-}
-
-button:disabled {
-  color: var(--text-muted);
-}
-
-button:not(:disabled) {
-  cursor: pointer;
-}
-
-.table-scroll {
-  overflow-x: auto;
-}
-
-table {
-  border-collapse: collapse;
-  width: 100%;
-  font-size: 0.9375rem;
-}
-
-th,
-td {
-  text-align: left;
-  vertical-align: top;
-  padding: 8px 12px 8px 0;
-  border-bottom: 1px solid var(--border);
-}
-
-thead th {
-  color: var(--text-secondary);
-  font-weight: 600;
-  font-size: 0.8125rem;
-  white-space: nowrap;
-}
-
-.num {
-  text-align: right;
-  font-variant-numeric: tabular-nums;
-}
-
-.nowrap {
-  white-space: nowrap;
-}
-
-.badge {
-  display: inline-flex;
-  gap: 4px;
-  white-space: nowrap;
-  font-weight: 600;
-  font-size: 0.875rem;
-}
-
-.badge-for span {
-  color: var(--good);
-}
-
-.badge-against span {
-  color: var(--critical);
-}
-
-.badge-abstain span,
-.badge-not_voted span {
-  color: var(--text-muted);
-}
-
-.dissent {
-  color: var(--warning-ink);
-  font-size: 0.8125rem;
-  font-weight: 600;
-}
-
-.pager {
-  display: flex;
-  gap: 16px;
-  align-items: center;
-  margin-top: 16px;
-}
-
-.card {
-  background: var(--surface-raised);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 12px;
-  margin: 0;
-}
-
-.multiples {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-  gap: 12px;
-}
-
-.multiples figcaption {
-  margin-bottom: 4px;
-}
-
-.tiles {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 12px;
-  margin: 16px 0 8px;
-}
-
-.tile-value {
-  font-size: 1.8rem;
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-}
-
-.heatmap {
-  width: auto;
-  border-collapse: separate;
-  border-spacing: 2px;
-}
-
-.heatmap th,
-.heatmap td {
-  border: 0;
-  padding: 6px 8px;
-  text-align: center;
-  white-space: nowrap;
-  font-size: 0.8125rem;
-}
-
-.heatmap th[scope='row'] {
-  text-align: right;
-}
-
-.heat-cell {
-  min-width: 44px;
-  border-radius: 3px;
-  font-variant-numeric: tabular-nums;
-}
-
-.heat-empty {
-  background: var(--grid);
-  border-radius: 3px;
-}
-
-.member-list {
-  list-style: none;
-  padding: 0;
-  columns: 280px;
-  column-gap: 24px;
-}
-
-.member-list li {
-  padding: 3px 0;
-  break-inside: avoid;
+/* Thin, quiet scrollbars inside the sidebar. */
+.quiet-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-line) transparent;
 }
