@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+import { useId, useState, type ReactNode } from 'react'
 import type { Async } from '../lib/hooks'
 import { useLocale } from '../lib/i18n'
 import { partyStyle } from '../lib/parties'
@@ -106,6 +106,50 @@ export function Stat({ label, value, detail, icon }: StatProps) {
       </div>
       {detail && <div className="mt-0.5 text-sm text-ink-2">{detail}</div>}
     </Card>
+  )
+}
+
+/**
+ * A small "?" that opens a short explanation. Opens on click or tap and
+ * closes on a second click, Escape, or when focus moves away.
+ */
+export function Help({ label, children }: { label: string; children: ReactNode }) {
+  const [open, setOpen] = useState(false)
+  const id = useId()
+  return (
+    <span
+      className="relative inline-flex"
+      onBlur={(event) => {
+        if (!event.currentTarget.contains(event.relatedTarget)) setOpen(false)
+      }}
+      onKeyDown={(event) => {
+        if (event.key === 'Escape') setOpen(false)
+      }}
+    >
+      <button
+        type="button"
+        aria-label={label}
+        aria-expanded={open}
+        aria-controls={id}
+        onClick={() => setOpen(!open)}
+        className={`grid size-4 cursor-pointer place-items-center rounded-full border text-[10px] font-bold leading-none transition ${
+          open
+            ? 'border-accent bg-accent-soft text-accent'
+            : 'border-line text-ink-3 hover:border-accent hover:text-accent'
+        }`}
+      >
+        ?
+      </button>
+      {open && (
+        <span
+          id={id}
+          role="note"
+          className="absolute left-0 top-full z-10 mt-2 block w-64 rounded-xl border border-line bg-panel p-3 text-xs font-normal normal-case leading-relaxed tracking-normal text-ink-2 shadow-lg shadow-black/20"
+        >
+          {children}
+        </span>
+      )}
+    </span>
   )
 }
 

@@ -65,6 +65,9 @@ const ro = {
 
   'widget.members': '{n} membri',
   'widget.cohesion': 'Coeziune',
+  'help.cohesionLabel': 'Ce înseamnă coeziunea?',
+  'help.cohesion':
+    'Coeziunea arată cât de unit votează un grup. La fiecare vot, poziția grupului este opțiunea aleasă de cei mai mulți dintre membrii săi. Coeziunea este ponderea voturilor exprimate de membri într-o lună care au coincis cu acea poziție. 100 % înseamnă că toți au votat la fel. Membrii absenți sau care nu au votat nu sunt luați în calcul.',
   'widget.delta': '{delta} față de luna anterioară',
   'widget.notBloc':
     'Parlamentarii neafiliați nu votează ca un bloc, așa că nu se afișează coeziunea.',
@@ -209,6 +212,9 @@ const en: Record<MessageKey, string> = {
 
   'widget.members': '{n} members',
   'widget.cohesion': 'Cohesion',
+  'help.cohesionLabel': 'What does cohesion mean?',
+  'help.cohesion':
+    'Cohesion shows how united a group votes. On each vote, the group’s position is the choice most of its members made. Cohesion is the share of the votes its members cast in a month that matched that position. 100% means everyone voted the same way. Members who were absent or did not vote are not counted.',
   'widget.delta': '{delta} on the month before',
   'widget.notBloc': 'Unaffiliated members do not vote as a bloc, so cohesion is not shown.',
   'widget.recentPositions': 'Position on recent votes',

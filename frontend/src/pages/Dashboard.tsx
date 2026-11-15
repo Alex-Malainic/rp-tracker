@@ -1,7 +1,16 @@
 import { useState } from 'react'
 import { Heatmap } from '../components/Heatmap'
 import { Sparkline } from '../components/Sparkline'
-import { AsyncView, Card, PageHeader, PartyDot, SectionTitle, SplitBar, Stat } from '../components/ui'
+import {
+  AsyncView,
+  Card,
+  Help,
+  PageHeader,
+  PartyDot,
+  SectionTitle,
+  SplitBar,
+  Stat,
+} from '../components/ui'
 import { fetchLatestSimilarity, fetchVotePage, type VotePage } from '../lib/api'
 import { useAsync } from '../lib/hooks'
 import { useLocale, type MessageKey } from '../lib/i18n'
@@ -158,8 +167,9 @@ function PartyWidget({ party, floor, votes, cells }: WidgetProps) {
         {bloc ? (
           <div>
             <div className="flex items-baseline justify-between gap-2">
-              <span className="text-xs font-medium uppercase tracking-wide text-ink-3">
+              <span className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide text-ink-3">
                 {t('widget.cohesion')}
+                <Help label={t('help.cohesionLabel')}>{t('help.cohesion')}</Help>
               </span>
               {latest && <span className="text-xs text-ink-3">{month(latest.month)}</span>}
             </div>
