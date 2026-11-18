@@ -4,7 +4,8 @@ on:
   schedule:
     # 20:00 UTC is 22:00 in Bucharest in winter and 23:00 in summer, after
     # sittings have ended.
-    - cron: "0 20 * * 2-7"
+    # Every day but Monday. Days run 0-6 from Sunday.
+    - cron: "0 20 * * 0,2-6"
     # Mondays also refresh which constituency each member was elected in.
     - cron: "0 20 * * 1"
   workflow_dispatch:
