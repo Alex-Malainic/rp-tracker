@@ -104,7 +104,7 @@ const ro = {
   'dash.showThree': 'Arată doar primele trei',
   'dash.similarityTitle': 'Cine votează cu cine',
   'dash.similarityNote':
-    'Procentul voturilor{year} la care două grupuri au avut aceeași poziție majoritară. Cu cât o celulă iese mai mult în evidență față de pagină, cu atât cele două au votat mai des la fel. Treci cu mouse-ul peste o celulă pentru numărul de voturi.',
+    'Procentul voturilor{year} la care două grupuri au avut aceeași poziție majoritară. Albastru înseamnă că votează de obicei la fel, roșu că votează de obicei diferit, iar griul, în jur de 50%, că nu votează mai des la fel decât la întâmplare. Treci cu mouse-ul peste o celulă pentru numărul de voturi.',
   'dash.inYear': ' din {year}',
 
   'pairs.closest': 'Votează cel mai des la fel',
@@ -151,6 +151,9 @@ const ro = {
 
   'heatmap.cell': '{a} și {b}: aceeași poziție la {percent} din {n} voturi',
   'heatmap.need': 'Selectează cel puțin două partide cu voturi pentru a le compara.',
+  'heatmap.apart': 'votează diferit',
+  'heatmap.chance': 'ca la întâmplare',
+  'heatmap.together': 'votează la fel',
 
   'party.back': '← Toate partidele',
   'party.none': 'Partid inexistent.',
@@ -294,7 +297,7 @@ const en: Record<MessageKey, string> = {
   'dash.showThree': 'Show only the three largest',
   'dash.similarityTitle': 'Who votes with whom',
   'dash.similarityNote':
-    'The percentage of votes{year} on which two groups took the same majority position. The more a cell stands out from the page, the more often the two voted alike. Hover a cell for the number of votes.',
+    'The percentage of votes{year} on which two groups took the same majority position. Blue means they usually vote alike, red that they usually vote differently, and grey, around 50%, that they agree no more often than chance. Hover a cell for the number of votes.',
   'dash.inYear': ' in {year}',
 
   'pairs.closest': 'Vote together most often',
@@ -340,6 +343,9 @@ const en: Record<MessageKey, string> = {
 
   'heatmap.cell': '{a} and {b}: same position on {percent} of {n} votes',
   'heatmap.need': 'Select at least two parties with votes to compare them.',
+  'heatmap.apart': 'vote differently',
+  'heatmap.chance': 'as if by chance',
+  'heatmap.together': 'vote alike',
 
   'party.back': '← All parties',
   'party.none': 'No such party.',

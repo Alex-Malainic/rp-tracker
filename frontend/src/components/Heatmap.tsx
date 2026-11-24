@@ -1,4 +1,4 @@
-import { heatColors } from '../lib/format'
+import { agreementColors, agreementSteps } from '../lib/format'
 import { usePrefersDark } from '../lib/hooks'
 import { useLocale } from '../lib/i18n'
 import type { Party, SimilarityCell } from '../lib/types'
@@ -41,7 +41,7 @@ export function Heatmap({ parties, cells }: { parties: Party[]; cells: Similarit
                 return (
                   <td
                     key={column.id}
-                    style={heatColors(cell.agreement, dark)}
+                    style={agreementColors(cell.agreement, dark)}
                     className="h-11 min-w-14 rounded-lg text-center text-sm font-medium tabular-nums"
                     title={t('heatmap.cell', {
                       a: row.abbreviation,
@@ -58,6 +58,38 @@ export function Heatmap({ parties, cells }: { parties: Party[]; cells: Similarit
           ))}
         </tbody>
       </table>
+      <AgreementLegend dark={dark} />
     </div>
   )
 }
+
+/** The colour key: apart on the left, chance in the middle, together on the right. */
+function AgreementLegend({ dark }: { dark: boolean }) {
+  const { t } = useLocale()
+  return (
+    <div className="mt-4 max-w-md text-xs text-ink-2">
+      <div className="flex h-3 gap-0.5" aria-hidden="true">
+        {agreementSteps(dark).map((color, index) => (
+          <span
+            key={color}
+            className="grow first:rounded-l-full last:rounded-r-full"
+            style={{ background: color }}
+            title={`${index * 10}%`}
+          />
+        ))}
+      </div>
+      <div className="mt-1.5 grid grid-cols-3">
+        <span>
+          <span className="font-semibold tabular-nums text-ink">0</span> · {t('heatmap.apart')}
+        </span>
+        <span className="text-center">
+          <span className="font-semibold tabular-nums text-ink">50</span> · {t('heatmap.chance')}
+        </span>
+        <span className="text-right">
+          {t('heatmap.together')} · <span className="font-semibold tabular-nums text-ink">100</span>
+        </span>
+      </div>
+    </div>
+  )
+}
+
