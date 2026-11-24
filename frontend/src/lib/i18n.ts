@@ -104,7 +104,7 @@ const ro = {
   'dash.showThree': 'Arată doar primele trei',
   'dash.similarityTitle': 'Cine votează cu cine',
   'dash.similarityNote':
-    'Procentul voturilor{year} la care două grupuri au avut aceeași poziție majoritară. Albastru înseamnă că votează de obicei la fel, roșu că votează de obicei diferit, iar griul, în jur de 50%, că nu votează mai des la fel decât la întâmplare. Treci cu mouse-ul peste o celulă pentru numărul de voturi.',
+    'Procentul voturilor{year} la care două grupuri au avut aceeași poziție majoritară. Verde înseamnă că votează de obicei la fel, roșu că votează de obicei diferit, iar culoarea deschisă din mijloc, în jur de 50%, că nu votează mai des la fel decât la întâmplare. Treci cu mouse-ul peste o celulă pentru numărul de voturi.',
   'dash.inYear': ' din {year}',
 
   'pairs.closest': 'Votează cel mai des la fel',
@@ -297,7 +297,7 @@ const en: Record<MessageKey, string> = {
   'dash.showThree': 'Show only the three largest',
   'dash.similarityTitle': 'Who votes with whom',
   'dash.similarityNote':
-    'The percentage of votes{year} on which two groups took the same majority position. Blue means they usually vote alike, red that they usually vote differently, and grey, around 50%, that they agree no more often than chance. Hover a cell for the number of votes.',
+    'The percentage of votes{year} on which two groups took the same majority position. Green means they usually vote alike, red that they usually vote differently, and the light middle, around 50%, that they agree no more often than chance. Hover a cell for the number of votes.',
   'dash.inYear': ' in {year}',
 
   'pairs.closest': 'Vote together most often',

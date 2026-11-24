@@ -18,24 +18,30 @@ export function plain(text: string): string {
 }
 
 // How often two groups vote alike, as a two-sided scale: red when they mostly
-// vote apart, grey around 50% (no more alike than chance), blue when they mostly
-// vote together. Index 0 is 0%, index 10 is 100%. Computed in OKLab from the
-// palette's blue and its red at equal lightness, so neither side looks heavier;
-// on a dark surface the stronger colours are the lighter ones.
+// vote differently, a light neutral around 50% (no more alike than chance),
+// green when they mostly vote together. Index 0 is 0%, index 10 is 100%.
+//
+// Built in OKLCH: each side keeps one hue all the way to the middle, so the
+// steps never pass through muddy browns or greys. The two sides have equal
+// lightness at equal distance from 50%, so neither looks heavier. The hues
+// (red 30°, emerald 165°) were chosen so the two ends stay distinguishable for
+// protanopia and deuteranopia (simulated, Machado et al. 2009); cells close to
+// 50% may look alike to colour-blind readers, which is why every cell also
+// shows its number.
 const AGREEMENT: Record<'light' | 'dark', string[]> = {
   light: [
-    '#9a0217', '#b04642', '#c4726b', '#d69b94', '#e4c5bf', '#f0efec',
-    '#c3cedc', '#98aecb', '#6e8eba', '#456fa8', '#184f95',
+    '#ca0f01', '#e83c2a', '#f66e5b', '#ff9989', '#ffc4b9', '#f2f0ec',
+    '#a6e4c8', '#5dd2a5', '#05ba87', '#059c71', '#027f5b',
   ],
   dark: [
-    '#ff8c89', '#d47b77', '#ab6a66', '#835955', '#5d4945', '#383835',
-    '#474f57', '#57687a', '#6681a0', '#769bc7', '#86b6ef',
+    '#c40f01', '#da3929', '#dd6857', '#dd8e80', '#dab0a8', '#d3d1cb',
+    '#9ec6b3', '#63ba96', '#06ab7c', '#03936a', '#017c59',
   ],
 }
 // Steps whose number reads better in white than in near-black.
 const WHITE_INK: Record<'light' | 'dark', Set<number>> = {
-  light: new Set([0, 1, 9, 10]),
-  dark: new Set([3, 4, 5, 6, 7]),
+  light: new Set([0, 10]),
+  dark: new Set([0, 1, 10]),
 }
 
 /** The scale's steps, from "always apart" to "always together". */
