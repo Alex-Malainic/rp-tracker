@@ -43,7 +43,9 @@ class CdepClient:
         http: httpx.Client | None = None,
         *,
         delay: float = 1.0,
-        retries: int = 3,
+        # cdep.ro sometimes errors on a page for half a minute; five retries with
+        # doubling waits (2, 4, ... 32 s) ride that out.
+        retries: int = 5,
         sleep: Callable[[float], None] = time.sleep,
     ) -> None:
         self._http = http or httpx.Client(
