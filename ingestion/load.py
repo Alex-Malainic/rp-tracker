@@ -117,8 +117,9 @@ def _upsert_parties(db: Client, groups: list[str]) -> dict[str, int]:
 
 
 def _upsert_mps(db: Client, ballots: list[Ballot], party_ids: dict[str, int]) -> dict[MpKey, int]:
-    # Ballots arrive in vote order, so the last one seen holds the member's
-    # most recent group.
+    # A provisional group: the member's last ballot in this batch. Batches can
+    # be loaded out of order, so refresh_stats() resets it from the newest
+    # ballot in the database.
     latest = {_mp_key(ballot): ballot for ballot in ballots}
     rows = [
         {
