@@ -121,6 +121,28 @@ class TestDayPage:
         with pytest.raises(ParseError, match="missing column"):
             parse_day_page(html, DAY)
 
+    def test_a_missing_did_not_vote_column_is_derived(self):
+        # Whole days are published without the column (seen on 2025-02-17).
+        html = day_html(vote_row(1, tally=("229", "78", "55", "96", "0")))
+        html = html.replace('<td data-label="Nu au votat*">0</td>', "")
+
+        (vote,) = parse_day_page(html, DAY)
+
+        assert (vote.present, vote.votes_for, vote.not_voted) == (229, 78, 0)
+
+    def test_a_derived_negative_count_fails_loudly(self):
+        html = day_html(vote_row(1, tally=("10", "8", "5", "0", "0")))
+        html = html.replace('<td data-label="Nu au votat*">0</td>', "")
+
+        with pytest.raises(ParseError, match="more votes than members present"):
+            parse_day_page(html, DAY)
+
+    def test_vote_links_without_recognised_rows_fail_loudly(self):
+        html = day_html(vote_row(1)).replace('data-label="Descriere"', 'data-label="Subiect"')
+
+        with pytest.raises(ParseError, match="no vote rows were recognised"):
+            parse_day_page(html, DAY)
+
     def test_non_numeric_tally_fails_loudly(self):
         html = day_html(vote_row(1, tally=("3", "many", "1", "1", "-")))
         with pytest.raises(ParseError, match="expected a number"):

@@ -8,6 +8,20 @@ verifies every vote without writing anything.
 **Verdict: per-MP vote data is available** from the Chamber of Deputies site
 (cdep.ro) for every electronic vote, including joint sittings with the Senate.
 
+## Access from outside Europe
+
+**cdep.ro drops connections from most networks outside Europe.** Tested on
+2026-11-24 with check-host.net from 40 servers: a page fetch succeeded from
+18, all in Europe or Turkey (Romania, Moldova, Bulgaria, Poland, Germany,
+Austria, the Netherlands, Sweden, Italy, Spain, Portugal, the UK, Switzerland,
+Iceland). Every server in the USA, Brazil, Japan, Singapore, India, Vietnam,
+Russia and Iran timed out, as did single servers in Hungary and Ukraine. The
+connection is never refused, it simply goes unanswered.
+
+GitHub's hosted runners are in Microsoft data centres, mostly in the USA,
+and their region cannot be chosen, so **ingestion cannot run on them**. It
+has to run from a machine in Europe.
+
 ## Endpoints
 
 All under `https://www.cdep.ro/ords/pls/steno/`. The older `/pls/steno/...`
@@ -86,6 +100,20 @@ names only.
 - **Time can be `00:00`.** All eight votes on 2026-11-11 have no time of day.
   Do not rely on time for ordering; use `VOTID`.
 - **Rows are not sorted** by id or time.
+- **Error pages come back with HTTP 200.** Under a burst of requests the site
+  sometimes returns an HTML error page, or a vote page without its ballot list,
+  with status 200. The client checks each page for a marker of the real thing
+  (the vote table header, member links, or a calendar without markup) and
+  retries otherwise.
+- **The "did not vote" column can be missing** from a whole day's page (e.g.
+  2025-02-17). It is then derived: present minus for, against and abstained.
+- **A day in the calendar can have an empty vote table** (2026-04-27). It is
+  logged and skipped.
+- **The ballot list and the summary can disagree by a vote.** On vote 37439
+  both the HTML and XML ballot lists give 196 for and 102 against; the summary
+  says 195 and 103. The number of ballots still equals the members present.
+  Small differences are logged and both figures are kept as published; a
+  larger one stops the run.
 - **Group labels are inconsistent**: `PNL(afiliat)` and `PNL (afiliat)`,
   `Neafiliati` in HTML against `neafiliat` in XML. Groups also change between
   legislatures (PMP, ALDE in 2017; POT in 2025; PACE in 2026) and members move

@@ -25,7 +25,9 @@ _CHOICES = {
     "-": Choice.NOT_VOTED,
 }
 _MEMBER_CHAMBERS = {"1": Chamber.SENATE, "2": Chamber.DEPUTIES}
-_TALLY_COLUMNS = ("Prezenta", "Pentru", "Împotriva", "Abtineri", "Nu au votat*")
+_TALLY_COLUMNS = ("Prezenta", "Pentru", "Împotriva", "Abtineri")
+# Some days leave this column out altogether; see _parse_vote_row.
+_NOT_VOTED_COLUMN = "Nu au votat*"
 _AFFILIATED = re.compile(r"\s*\(afiliat\)\s*$", re.IGNORECASE)
 _TEST_VOTE = re.compile(r"^\s*vot\s+test\b", re.IGNORECASE)
 _CONSTITUENCY_NUMBER = re.compile(r"\s*(\d+)\s*/")
@@ -81,6 +83,8 @@ def parse_day_page(html: str, sitting_date: date) -> list[Vote]:
             raise ParseError("vote description outside a table row")
         votes.append(_parse_vote_row(row, cell, bill, sitting_date))
         bill = None
+    if not votes and soup.select_one('a[href*="evot2015.nominal"]'):
+        raise ParseError("the page links to votes but no vote rows were recognised")
     return votes
 
 
@@ -95,6 +99,16 @@ def _parse_vote_row(row: Tag, description: Tag, bill: Tag | None, sitting_date: 
         id_text = cells["Id vot"].get_text(" ", strip=True)
         time_text = cells["Ora"].get_text(strip=True)
         tallies = {label: _int(cells[label].get_text(strip=True)) for label in _TALLY_COLUMNS}
+        if _NOT_VOTED_COLUMN in cells:
+            not_voted = _int(cells[_NOT_VOTED_COLUMN].get_text(strip=True))
+        else:
+            # Whole days are published without the column. Everyone present
+            # either voted or did not, so the count follows from the others.
+            not_voted = tallies["Prezenta"] - sum(
+                tallies[label] for label in ("Pentru", "Împotriva", "Abtineri")
+            )
+            if not_voted < 0:
+                raise ParseError(f"vote {vote_id}: more votes than members present")
     except KeyError as error:
         raise ParseError(f"vote {vote_id}: missing column {error}") from error
 
@@ -121,7 +135,7 @@ def _parse_vote_row(row: Tag, description: Tag, bill: Tag | None, sitting_date: 
         votes_for=tallies["Pentru"],
         votes_against=tallies["Împotriva"],
         abstained=tallies["Abtineri"],
-        not_voted=tallies["Nu au votat*"],
+        not_voted=not_voted,
     )
 
 

@@ -20,6 +20,12 @@ CHAMBER_CODES = {Chamber.SENATE: 1, Chamber.DEPUTIES: 2}
 USER_AGENT = "rp-tracker/0.1 (public vote tracker; github.com)"
 RETRYABLE_STATUS = frozenset({429, 500, 502, 503, 504})
 
+# cdep.ro sometimes answers a burst of requests with an error page and
+# HTTP 200. Each endpoint's real page contains a marker; a body without it
+# is retried like a server error.
+DAY_PAGE_MARKER = 'class="descriere"'  # header of the vote table, present even when empty
+MEMBER_LINK_MARKER = "structura2015.mp?idm="
+
 
 class FetchError(RuntimeError):
     """The source could not be read after all retries."""
@@ -52,25 +58,40 @@ class CdepClient:
         self._requested = False
 
     def sitting_days(self, year: int, month: int) -> str:
-        return self._get("evot2015.zile_vot", {"lu": month, "an": year})
+        # A plain list of dates, or nothing for a month without sittings.
+        return self._get(
+            "evot2015.zile_vot", {"lu": month, "an": year}, lambda body: "<" not in body
+        )
 
     def day_page(self, day: date) -> str:
-        return self._get("evot2015.data", {"dat": f"{day:%Y%m%d}", "idl": 1})
+        return self._get(
+            "evot2015.data",
+            {"dat": f"{day:%Y%m%d}", "idl": 1},
+            lambda body: DAY_PAGE_MARKER in body,
+        )
 
     def ballots_page(self, vote_id: int) -> str:
-        return self._get("evot2015.nominal", {"idv": vote_id, "idl": 1})
+        return self._get(
+            "evot2015.nominal", {"idv": vote_id, "idl": 1}, lambda body: MEMBER_LINK_MARKER in body
+        )
 
     def members_page(self, chamber: Chamber, legislature: int) -> str:
         """The alphabetical list of a chamber's members, with constituencies."""
         return self._get(
             f"{MEMBERS_URL}structura2015.de",
             {"cam": CHAMBER_CODES[chamber], "leg": legislature, "idl": 1},
+            lambda body: MEMBER_LINK_MARKER in body,
         )
 
     def close(self) -> None:
         self._http.close()
 
-    def _get(self, path: str, params: dict[str, object]) -> str:
+    def _get(
+        self,
+        path: str,
+        params: dict[str, object],
+        looks_right: Callable[[str], bool] = lambda body: True,
+    ) -> str:
         last_error: Exception | None = None
         for attempt in range(self._retries + 1):
             if attempt:
@@ -93,7 +114,12 @@ class CdepClient:
             if response.status_code != 200:
                 raise FetchError(f"GET {path} {params} returned HTTP {response.status_code}")
             # The pages are UTF-8 whatever their own declarations say.
-            return response.content.decode("utf-8")
+            body = response.content.decode("utf-8")
+            if not looks_right(body):
+                last_error = FetchError(f"GET {path} {params} returned an unexpected page")
+                log.warning("GET %s %s returned an unexpected page: %.80r", path, params, body)
+                continue
+            return body
         raise FetchError(
             f"GET {path} {params} failed after {self._retries} retries"
         ) from last_error

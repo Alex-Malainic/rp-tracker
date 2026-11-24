@@ -21,6 +21,10 @@ from ingestion.parse import (
 
 log = logging.getLogger(__name__)
 
+# Ballots moved between choices, summed, before a vote is rejected. Two is
+# a single member counted under a different choice.
+MAX_TALLY_DRIFT = 4
+
 
 class Source(Protocol):
     def sitting_days(self, year: int, month: int) -> str: ...
@@ -51,12 +55,14 @@ def sitting_days_between(source: Source, start: date, end: date) -> list[date]:
 def collect_day(source: Source, day: date) -> DayData:
     """Fetch and verify every vote of a sitting day.
 
-    The caller is expected to pass days taken from the sitting calendar, so a
-    day page without votes means the page format changed.
+    The calendar occasionally lists a day whose vote table is empty; that day
+    is logged and skipped. (A page that is not a vote table at all is caught
+    when fetching, and rows that cannot be read raise ParseError.)
     """
     votes = parse_day_page(source.day_page(day), day)
     if not votes:
-        raise SourceMismatchError(f"{day}: listed as a sitting day but no votes were found")
+        log.warning("%s: listed as a sitting day but its vote table is empty", day)
+        return DayData(day=day, votes=[], ballots=[])
 
     kept: list[Vote] = []
     ballots: list[Ballot] = []
@@ -108,12 +114,33 @@ def collect_seats(source: Source, legislature: int) -> list[Seat]:
 
 
 def _verify(vote: Vote, ballots: list[Ballot]) -> None:
+    """Check the ballots against the vote's published totals.
+
+    The number of ballots must equal the members present. The split between
+    choices may differ slightly: cdep.ro's own ballot list and its summary
+    occasionally disagree by a vote (seen on vote 37439, where both the HTML
+    and XML lists say 196 for and the summary 195). Both are stored as
+    published and the difference is logged; a larger gap means a parsing fault.
+    """
+    if len(ballots) != vote.present:
+        raise SourceMismatchError(
+            f"vote {vote.id}: {len(ballots)} ballots do not match the official tally of "
+            f"{vote.present} members present"
+        )
     counted = Counter(ballot.choice for ballot in ballots)
     parsed = {choice: counted.get(choice, 0) for choice in vote.tally}
-    if parsed != vote.tally:
+    drift = sum(abs(parsed[choice] - vote.tally[choice]) for choice in vote.tally)
+    if drift > MAX_TALLY_DRIFT:
         raise SourceMismatchError(
             f"vote {vote.id}: ballots {_show(parsed)} do not match the official "
             f"tally {_show(vote.tally)}"
+        )
+    if drift:
+        log.warning(
+            "vote %s: ballots %s differ from the official tally %s; both kept as published",
+            vote.id,
+            _show(parsed),
+            _show(vote.tally),
         )
     members = {(ballot.chamber, ballot.legislature, ballot.mp_source_id) for ballot in ballots}
     if len(members) != len(ballots):

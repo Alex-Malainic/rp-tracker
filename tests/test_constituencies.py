@@ -196,9 +196,9 @@ def test_client_requests_the_member_list():
 
     def handler(request):
         seen.append(str(request.url))
-        return httpx.Response(200, text="ok")
+        return httpx.Response(200, text=members_html((1, "Pop Ion", 1), chamber=1))
 
     http = httpx.Client(base_url=BASE_URL, transport=httpx.MockTransport(handler))
-    CdepClient(http).members_page(Chamber.SENATE, 2024)
+    CdepClient(http, sleep=lambda seconds: None).members_page(Chamber.SENATE, 2024)
 
     assert seen == ["https://www.cdep.ro/ords/pls/parlam/structura2015.de?cam=1&leg=2024&idl=1"]

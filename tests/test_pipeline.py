@@ -55,9 +55,34 @@ class TestCollectDay:
         with pytest.raises(SourceMismatchError, match="more than once"):
             collect_day(source_with(page, {7: twice}), DAY)
 
-    def test_sitting_day_without_votes_fails_loudly(self):
-        with pytest.raises(SourceMismatchError, match="no votes were found"):
-            collect_day(source_with("<html></html>", {}), DAY)
+    def test_a_sitting_day_with_an_empty_vote_table_is_skipped(self, caplog):
+        data = collect_day(source_with(day_html(), {}), DAY)
+
+        assert (data.votes, data.ballots) == ([], [])
+        assert "vote table is empty" in caplog.text
+
+    def test_a_one_vote_disagreement_with_the_summary_is_kept_and_logged(self, caplog):
+        # Seen on vote 37439: the ballot list says 2 for, the summary 1.
+        page = day_html(vote_row(7, tally=("3", "1", "2", "-", "-")))
+        ballots = ballots_html(
+            (1, "Pop Ion", "PSD", "DA"), (4, "Ene Ana", "PSD", "DA"), (2, "Rus Ana", "PNL", "NU")
+        )
+        source = source_with(page, {7: ballots})
+
+        data = collect_day(source, DAY)
+
+        assert [vote.id for vote in data.votes] == [7]
+        assert len(data.ballots) == 3
+        assert "differ from the official tally" in caplog.text
+
+    def test_a_large_disagreement_with_the_summary_fails_loudly(self):
+        page = day_html(vote_row(7, tally=("3", "-", "3", "-", "-")))
+        source = source_with(
+            page, {7: ballots_html(*((n, f"M{n}", "PSD", "DA") for n in (1, 2, 3)))}
+        )
+
+        with pytest.raises(SourceMismatchError, match="do not match the official tally"):
+            collect_day(source, DAY)
 
 
 class TestSittingDaysBetween:
