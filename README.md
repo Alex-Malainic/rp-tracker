@@ -118,7 +118,7 @@ npm run dev
    in order (SQL editor, or `supabase db push`).
 2. In the GitHub repository settings add:
    - secrets `SUPABASE_URL` and `SUPABASE_SERVICE_KEY` (used by ingestion);
-   - variables `SUPABASE_URL` and `SUPABASE_ANON_KEY` (built into the frontend;
+   - variables (not secrets) `SUPABASE_URL` and `SUPABASE_ANON_KEY` (built into the frontend;
      both are public by design).
 3. Under Settings → Pages, set the source to "GitHub Actions".
 4. Run the **Ingest** workflow manually with `date` and `to` set to backfill a

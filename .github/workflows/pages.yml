@@ -31,12 +31,24 @@ jobs:
           cache: npm
           cache-dependency-path: frontend/package-lock.json
       - run: npm ci
-      - run: npm run build
+      - name: Build
         env:
-          # Both values are public by design: the anon key can only read,
-          # which row level security enforces in the database.
-          VITE_SUPABASE_URL: ${{ vars.SUPABASE_URL }}
-          VITE_SUPABASE_ANON_KEY: ${{ vars.SUPABASE_ANON_KEY }}
+          # Both values are public by design: the publishable (anon) key can
+          # only read, which row level security enforces in the database. They
+          # are repository variables; the URL may also come from the secret
+          # the ingestion job uses, and the key may use Supabase's newer name.
+          VITE_SUPABASE_URL: ${{ vars.SUPABASE_URL || secrets.SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ vars.SUPABASE_ANON_KEY || vars.SUPABASE_PUBLISHABLE_KEY }}
+        run: |
+          # A site built without these shows only an error, so never publish one.
+          missing=""
+          [ -n "$VITE_SUPABASE_URL" ] || missing="$missing SUPABASE_URL"
+          [ -n "$VITE_SUPABASE_ANON_KEY" ] || missing="$missing SUPABASE_ANON_KEY"
+          if [ -n "$missing" ]; then
+            echo "::error::Missing repository variable(s):$missing. Add them under Settings > Secrets and variables > Actions > Variables."
+            exit 1
+          fi
+          npm run build
       - uses: actions/upload-pages-artifact@v5
         with:
           path: frontend/dist
